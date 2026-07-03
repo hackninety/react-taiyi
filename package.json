@@ -1,0 +1,28 @@
+{
+  "name": "react-taiyi",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "太乙神数排盘 — 汇集 GitHub 开源太乙算法（kintaiyi/taiyipython 等）的 React + TypeScript 实现",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "lunar-typescript": "^1.7.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@types/react": "^18.3.10",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "typescript": "~5.6.2",
+    "vite": "^5.4.8",
+    "vitest": "^2.1.2"
+  }
+}

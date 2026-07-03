@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://api.github.com/search/repositories?q=%E5%A4%AA%E4%B9%99%E7%A5%9E%E6%95%B0&per_page=30\")",
+      "Bash(python -c ' *)",
+      "Bash(curl -s \"https://api.github.com/search/repositories?q=%E5%A4%AA%E4%B9%99&per_page=30&sort=stars\")",
+      "Bash(curl -s \"https://api.github.com/search/repositories?q=taiyi+divination&per_page=20\" -o taiyi_en.json)",
+      "Bash(curl -s \"https://api.github.com/users/wlhyl/repos?per_page=100\" -o wlhyl.json)",
+      "Bash(PYTHONIOENCODING=utf-8 python -c ' *)",
+      "Bash(curl -s \"https://api.github.com/users/kentang2017/repos?per_page=100\" -o kentang.json)"
+    ]
+  }
+}
