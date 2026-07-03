@@ -621,6 +621,19 @@ body {
   line-height: 1.6;
 }
 
+/* 皇极经世卦名 */
+.hj-hex {
+  color: var(--gold-light);
+  white-space: nowrap;
+}
+
+.hj-hex em {
+  font-style: normal;
+  color: var(--gold);
+  margin-left: 2px;
+  text-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+}
+
 /* ── 导出卡 ── */
 .export-card {
   margin-top: 20px;

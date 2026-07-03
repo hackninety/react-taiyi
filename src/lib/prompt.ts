@@ -8,10 +8,11 @@ export function generateAIPrompt(payload: ExportPayload): string {
   const jsonStr = toJSONText(payload);
   const hasMingfa = Boolean(payload.mingfa);
   const hasPlanets = Boolean(payload.planets);
+  const hasHuangji = Boolean(payload.huangji);
 
   return `你是一位精通太乙神数（三式之首）的资深术数分析师，谙熟《太乙金镜式经》《太乙统宗宝鉴》诸典。请根据以下排盘数据进行深入、专业的推演分析。
 
-数据说明：JSON 含计式与积年流派、积数、局式（阴阳遁/七十二局/理天地人）、太乙落宫、文昌始击定目、计神合神、主客定三算与大将参将、十六神式盘落位、八门值事与分布、格局（掩迫关囚击格对提挟执提四郭固杜）、君臣民基等神煞、阳九百六、值年日时卦${hasMingfa ? '、太乙命法（命法积数/三才数/十二命宫/阳九百六行限/流年卦链）' : ''}${hasPlanets ? '、十精七曜落位' : ''}，请充分利用所有字段。
+数据说明：JSON 含计式与积年流派、积数、局式（阴阳遁/七十二局/理天地人）、太乙落宫、文昌始击定目、计神合神、主客定三算与大将参将、十六神式盘落位、八门值事与分布、格局（掩迫关囚击格对提挟执提四郭固杜）、君臣民基等神煞、阳九百六、值年日时卦${hasMingfa ? '、太乙命法（命法积数/三才数/十二命宫/阳九百六行限/流年卦链）' : ''}${hasPlanets ? '、十精七曜落位' : ''}${hasHuangji ? '、皇极经世历（元会运世定位与辟卦/运卦/世卦/十年卦/岁卦/月日时卦，可与太乙局象互参大时代背景）' : ''}，请充分利用所有字段。
 
 \`\`\`json
 ${jsonStr}

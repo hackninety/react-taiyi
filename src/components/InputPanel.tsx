@@ -1,4 +1,4 @@
-import type { AcumYear, JiStyle, Sex, TaiyiInput } from '../taiyi';
+import type { AcumYear, HuangjiSchool, JiStyle, Sex, TaiyiInput } from '../taiyi';
 import { JI_NAME, METHOD_NAME } from '../taiyi';
 import { PROVINCES } from '../lib/cities';
 
@@ -19,6 +19,10 @@ interface Props {
   showTenjing: boolean;
   onShowTenjingChange: (v: boolean) => void;
   tenjingLoading: boolean;
+  showHuangji: boolean;
+  onShowHuangjiChange: (v: boolean) => void;
+  huangjiSchool: HuangjiSchool;
+  onHuangjiSchoolChange: (s: HuangjiSchool) => void;
   solar: SolarTimeSetting;
   onSolarChange: (s: SolarTimeSetting) => void;
   /** 校正说明文本（生效时显示） */
@@ -29,6 +33,7 @@ export function InputPanel({
   value, onChange, sex, onSexChange,
   showMingfa, onShowMingfaChange,
   showTenjing, onShowTenjingChange, tenjingLoading,
+  showHuangji, onShowHuangjiChange, huangjiSchool, onHuangjiSchoolChange,
   solar, onSolarChange, solarHint,
 }: Props) {
   const set = (patch: Partial<TaiyiInput>) => onChange({ ...value, ...patch });
@@ -153,6 +158,24 @@ export function InputPanel({
             >
               <option value="男">男命</option>
               <option value="女">女命</option>
+            </select>
+          )}
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={showHuangji}
+              onChange={(ev) => onShowHuangjiChange(ev.target.checked)}
+            />
+            皇极
+          </label>
+          {showHuangji && (
+            <select
+              aria-label="皇极流派"
+              value={huangjiSchool}
+              onChange={(ev) => onHuangjiSchoolChange(ev.target.value as HuangjiSchool)}
+            >
+              <option value="黄畿">黄畿派</option>
+              <option value="祝泌">祝泌派</option>
             </select>
           )}
         </div>

@@ -4,6 +4,7 @@
 import type { GongName, TaiyiResult } from './types';
 import type { MingfaResult } from './mingfa';
 import type { SolarTimeInfo } from './solartime';
+import type { HuangjiInfo } from './huangji';
 import { SIXTEEN_GOD, NUM_TO_GONG } from './constants';
 
 export interface ExportPayload {
@@ -13,9 +14,11 @@ export interface ExportPayload {
   planets?: Record<string, string[]> | null;
   /** 真太阳时校正信息 */
   solarTime?: SolarTimeInfo | null;
+  /** 皇极经世历 */
+  huangji?: HuangjiInfo | null;
 }
 
-export function toJSONText({ result, mingfa, planets, solarTime }: ExportPayload): string {
+export function toJSONText({ result, mingfa, planets, solarTime, huangji }: ExportPayload): string {
   return JSON.stringify(
     {
       app: 'react-taiyi',
@@ -24,6 +27,7 @@ export function toJSONText({ result, mingfa, planets, solarTime }: ExportPayload
       result,
       ...(mingfa ? { mingfa } : {}),
       ...(planets ? { tenJing: planets } : {}),
+      ...(huangji ? { huangji } : {}),
     },
     null,
     2,
@@ -36,7 +40,7 @@ const BOARD_ORDER: GongName[] = [
   '巳', '午', '未', '坤', '申', '酉', '戌', '乾', '亥', '子', '丑', '艮', '寅', '卯', '辰', '巽', '中',
 ];
 
-export function toMarkdown({ result: r, mingfa, planets, solarTime }: ExportPayload): string {
+export function toMarkdown({ result: r, mingfa, planets, solarTime, huangji }: ExportPayload): string {
   const L: string[] = [];
   const { input } = r;
   const pad = (n: number, w = 2) => String(n).padStart(w, '0');
@@ -154,7 +158,21 @@ export function toMarkdown({ result: r, mingfa, planets, solarTime }: ExportPayl
     L.push('');
   }
 
+  if (huangji) {
+    const hx = (h: { name: string; symbol: string }) => `${h.name}${h.symbol}`;
+    L.push('## 皇极经世历');
+    L.push('');
+    L.push(`- 皇极纪年：第 ${huangji.huangjiYear} 年（元起于公元前 67017 年，一元 129,600 年）`);
+    L.push(`- 会：${huangji.hui.branch}会（第 ${huangji.hui.ordinal} 会）· 辟卦 ${hx(huangji.hui.hexagram)} · 会内第 ${huangji.hui.yearInHui} 年`);
+    L.push(`- 运：元内第 ${huangji.yun.global} 运 · 运卦 ${hx(huangji.yun.hexagram)}（主卦${huangji.yun.master.name}变${huangji.yun.yaoName}爻）· 运内第 ${huangji.yun.yearInYun} 年`);
+    L.push(`- 世：元内第 ${huangji.shi.global} 世 · 世卦 ${hx(huangji.shi.hexagram)} · 世内第 ${huangji.shi.yearInShi} 年`);
+    L.push(`- 十年卦：${hx(huangji.decade.hexagram)}（世卦变${huangji.decade.yaoName}爻，黄畿注口径）`);
+    L.push(`- 岁卦（${huangji.school}派）：${hx(huangji.sui)}（${huangji.suiOther.school}派作 ${hx(huangji.suiOther.hexagram)}）`);
+    L.push(`- 月卦 / 日卦 / 时卦：${hx(huangji.month)} / ${hx(huangji.day)} / ${hx(huangji.hour)}`);
+    L.push('');
+  }
+
   L.push('---');
-  L.push('*由 react-taiyi 生成；算法参照 kentang2017/kintaiyi（MIT）与 wlhyl/taiyipython。*');
+  L.push('*由 react-taiyi 生成；算法参照 kentang2017/kintaiyi（MIT）与 wlhyl/taiyipython；皇极经世历参照 react-yhys。*');
   return L.join('\n');
 }

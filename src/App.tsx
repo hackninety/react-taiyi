@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  calculateTaiyi, calculateMingfa, loadStarsData, findStars, starsLoaded, applyTrueSolarTime,
+  calculateTaiyi, calculateMingfa, calculateHuangji, loadStarsData, findStars, starsLoaded, applyTrueSolarTime,
 } from './taiyi';
-import type { MingfaResult, Sex, SolarTimeInfo, TaiyiInput, TaiyiResult } from './taiyi';
+import type { HuangjiInfo, HuangjiSchool, MingfaResult, Sex, SolarTimeInfo, TaiyiInput, TaiyiResult } from './taiyi';
 import { findLongitude } from './lib/cities';
 import { InputPanel } from './components/InputPanel';
 import type { SolarTimeSetting } from './components/InputPanel';
 import { Board } from './components/Board';
 import { ResultPanel } from './components/ResultPanel';
 import { MingfaPanel } from './components/MingfaPanel';
+import { HuangjiPanel } from './components/HuangjiPanel';
 import { ExportCard } from './components/ExportCard';
 import { GuidePage } from './components/GuidePage';
 import { ToastProvider } from './components/Toast';
@@ -34,6 +35,8 @@ export default function App() {
   const [showTenjing, setShowTenjing] = useState(false);
   const [tenjingReady, setTenjingReady] = useState(false);
   const [tenjingError, setTenjingError] = useState<string | null>(null);
+  const [showHuangji, setShowHuangji] = useState(false);
+  const [huangjiSchool, setHuangjiSchool] = useState<HuangjiSchool>('黄畿');
   const [solar, setSolar] = useState<SolarTimeSetting>({
     enabled: false,
     province: '北京',
@@ -99,6 +102,19 @@ export default function App() {
     return findStars(effectiveInput.year, effectiveInput.month, effectiveInput.day);
   }, [showTenjing, tenjingReady, effectiveInput.year, effectiveInput.month, effectiveInput.day]);
 
+  const huangji = useMemo<HuangjiInfo | null>(() => {
+    if (!showHuangji || !result) return null;
+    try {
+      return calculateHuangji(effectiveInput.year, huangjiSchool, {
+        monthGz: result.ganzhi[1],
+        dayGz: result.ganzhi[2],
+        hourBranch: result.ganzhi[3][1],
+      });
+    } catch {
+      return null;
+    }
+  }, [showHuangji, huangjiSchool, effectiveInput.year, result]);
+
   const solarHint = solarInfo.applied
     ? `${solarInfo.offsetMinutes! >= 0 ? '+' : ''}${solarInfo.offsetMinutes} 分钟 → ${String(solarInfo.adjusted!.hour).padStart(2, '0')}:${String(solarInfo.adjusted!.minute).padStart(2, '0')} 起局`
     : null;
@@ -143,6 +159,10 @@ export default function App() {
           showTenjing={showTenjing}
           onShowTenjingChange={setShowTenjing}
           tenjingLoading={showTenjing && !tenjingReady && !tenjingError}
+          showHuangji={showHuangji}
+          onShowHuangjiChange={setShowHuangji}
+          huangjiSchool={huangjiSchool}
+          onHuangjiSchoolChange={setHuangjiSchool}
           solar={solar}
           onSolarChange={setSolar}
           solarHint={solarHint}
@@ -156,11 +176,12 @@ export default function App() {
             <main className="content">
               <Board result={result} planets={planets} />
               <div className="result-panel">
+                {huangji && <HuangjiPanel info={huangji} />}
                 {mingfa && <MingfaPanel mingfa={mingfa} />}
                 <ResultPanel result={result} solarInfo={solarInfo} />
               </div>
             </main>
-            <ExportCard payload={{ result, mingfa, planets, solarTime: solarInfo }} />
+            <ExportCard payload={{ result, mingfa, planets, solarTime: solarInfo, huangji }} />
           </>
         )}
         </div>
