@@ -24,6 +24,8 @@ export interface ExportPayload {
   huangji?: HuangjiInfo | null;
   /** 仅皇极模式下的起局输入（公历，天文纪年） */
   huangjiOnlyInput?: { year: number; month: number; day: number; hour: number; minute: number } | null;
+  /** kintaiyi 全解释盘（后端 pan() 直出，中文键与上游一致；后端不可用时为空） */
+  kintaiyiPan?: Record<string, unknown> | null;
 }
 
 /** 四流派太乙积年常数（与 engine TN_DICT 一致，导出时注明以防混用） */
@@ -75,12 +77,14 @@ export interface ExportMeta {
 }
 
 /** 口径明细：AI 读盘前先看这里，重点是流派标注，防止不同流派数据错乱 */
-export function buildMeta({ result: r, mingfa, planets, solarTime, huangji }: ExportPayload): ExportMeta {
+export function buildMeta({ result: r, mingfa, planets, solarTime, huangji, kintaiyiPan }: ExportPayload): ExportMeta {
+  const payloadHasPan = Boolean(kintaiyiPan && Object.keys(kintaiyiPan).length);
   const modules: string[] = [];
   if (r) modules.push('太乙主盘');
   if (mingfa) modules.push('太乙命法');
   if (planets) modules.push('十精（七曜落位）');
   if (huangji) modules.push('皇极经世历');
+  if (payloadHasPan) modules.push('kintaiyi 全解释盘（統宗寶鑑诸卷）');
 
   return {
     应用: 'react-taiyi 太乙神数排盘',
@@ -170,7 +174,7 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
 }
 
 export function toJSONText(payload: ExportPayload): string {
-  const { result, mingfa, planets, solarTime, huangji, huangjiOnlyInput } = payload;
+  const { result, mingfa, planets, solarTime, huangji, huangjiOnlyInput, kintaiyiPan } = payload;
   return JSON.stringify(
     {
       app: 'react-taiyi',
@@ -183,6 +187,8 @@ export function toJSONText(payload: ExportPayload): string {
       ...(mingfa ? { mingfa } : {}),
       ...(planets ? { tenJing: planets } : {}),
       ...(huangji ? { huangji } : {}),
+      // kintaiyi 全解释盘（《太乙統宗寶鑑》诸卷释文/統運/卦象/军事/博弈），繁体中文键为上游原样
+      ...(kintaiyiPan ? { kintaiyiPan } : {}),
     },
     null,
     2,

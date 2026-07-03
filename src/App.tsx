@@ -11,6 +11,9 @@ import {
   getApiBase, saveApiBase, getDataSource, saveDataSource,
 } from './taiyi/remote';
 import type { DataSource } from './taiyi/remote';
+import { fetchPan } from './taiyi/pan';
+import { PanCards } from './components/PanCards';
+import type { PanState } from './components/PanCards';
 import { InputPanel } from './components/InputPanel';
 import type { SolarTimeSetting } from './components/InputPanel';
 import { Board } from './components/Board';
@@ -58,6 +61,7 @@ export default function App() {
   const [dataSource, setDataSource] = useState<DataSource>(getDataSource);
   const [apiBase, setApiBase] = useState<string>(getApiBase);
   const [remote, setRemote] = useState<RemoteState>({ phase: 'off' });
+  const [pan, setPan] = useState<PanState>({ phase: 'idle' });
   const [boardView, setBoardView] = useState<'both' | 'square' | 'circle'>('both');
   const [solar, setSolar] = useState<SolarTimeSetting>({
     enabled: false,
@@ -184,6 +188,28 @@ export default function App() {
     return () => { active = false; clearTimeout(timer); ctrl.abort(); };
   }, [dataSource, apiBase, effectiveInput, result, taiyiInRange]);
 
+  // 全解释盘（kintaiyi pan()，含博弈）：仅后端可用时请求；pan 较重，独立于对照请求
+  useEffect(() => {
+    if (remote.phase !== 'ok') {
+      setPan({ phase: 'idle' });
+      return;
+    }
+    let active = true;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000); // 首次未缓存需数秒
+    setPan({ phase: 'loading' });
+    fetchPan(effectiveInput, apiBase, true, ctrl.signal)
+      .then((resp) => { if (active) setPan({ phase: 'ok', data: resp.pan, ref: resp.ref }); })
+      .catch((e: unknown) => {
+        if (!active) return;
+        const reason = ctrl.signal.aborted ? '请求超时' : e instanceof Error ? e.message : String(e);
+        setPan({ phase: 'err', reason });
+      })
+      .finally(() => clearTimeout(timer));
+    return () => { active = false; clearTimeout(timer); ctrl.abort(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remote.phase === 'ok', effectiveInput, apiBase]);
+
   const remoteOk = remote.phase === 'ok';
   const circularUrl = remoteOk ? panSvgUrl(effectiveInput, apiBase, Boolean(planets)) : null;
   const circularNote = dataSource === 'local'
@@ -292,7 +318,24 @@ export default function App() {
                 <ResultPanel result={result} solarInfo={solarInfo} />
               </div>
             </main>
-            <ExportCard payload={{ result, mingfa, planets, solarTime: solarInfo, huangji }} />
+            {taiyiInRange && (
+              <PanCards
+                state={pan}
+                unavailableNote={
+                  dataSource === 'local'
+                    ? '「仅本地引擎」模式下不加载——全解釋由 kintaiyi 后端直出，切换数据源后显示。'
+                    : remote.phase === 'fallback'
+                      ? 'kintaiyi 后端不可用，全解釋暂无法加载（盘面与导出不受影响）。'
+                      : null
+                }
+              />
+            )}
+            <ExportCard
+              payload={{
+                result, mingfa, planets, solarTime: solarInfo, huangji,
+                kintaiyiPan: pan.phase === 'ok' ? pan.data : null,
+              }}
+            />
           </>
         )}
 

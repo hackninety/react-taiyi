@@ -1,5 +1,14 @@
 # 补充计划：对齐 kintaiyi 演示站全部功能（除 AI 对话）
 
+> **进度（2026-07-03）**：后端三端点已上线（`/api/taiyi/pan`、`/api/taiyi/life`、`/api/docs/{name}`，
+> 均部署至 US_0x7c）；前端已交付 **P0+P1+P2 主体**——「kintaiyi 全解釋」16 组分组卡
+> （src/taiyi/pan.ts 分组定义 + PanCards 通用递归渲染，含統運卷十二/卦象卷十三/军事/軌運/博弈全部内容），
+> pan 整体并入 JSON 导出（kintaiyiPan），守卫测试锁上游键名（tests/pan.test.ts）。
+> **剩余（下次会话）**：P1 增强（統運任意年查询交互、五流卦運多期滑动时间轴、統運/軌運可视化时间轴）、
+> P2 增强（五陣八陣 SVG 置旗图）、P3 独立页（局數史例交互时间轴+即时排盘、災異統計、古籍書目、
+> 看盤要領、更新日誌——数据端点已就绪 `/api/docs/*`，前端解析渲染参照 apps/*.py 正则）、
+> 命法卷二十扩展接入 `/api/taiyi/life`（数据已通，前端未接）。
+
 > 结论先答疑：演示站 https://kintaiyi.streamlit.app/ 的功能 **GitHub 仓库全都带**——
 > 入口 `apps/streamlit_app.py`（8 个 Tab），静态内容在 `docs/*.md`，解释/诸卷数据由
 > `Taiyi.pan()` 一次性返回。**是我们首版只移植了核心排盘引擎，属遗漏**，不是上游没开源。

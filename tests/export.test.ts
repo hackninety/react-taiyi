@@ -19,6 +19,16 @@ describe('导出', () => {
     expect(parsed.mingfa.lifeAccum).toBe(mingfa.lifeAccum);
   });
 
+  it('kintaiyiPan 全解释盘并入 JSON 导出与 meta 模块', () => {
+    const kintaiyiPan = { 釋格局: { 掩: '太乙掩击之释文' }, 卷十二: { 統運入卦: {} } };
+    const parsed = JSON.parse(toJSONText({ result, kintaiyiPan }));
+    expect(parsed.kintaiyiPan.釋格局.掩).toBe('太乙掩击之释文');
+    expect(parsed.meta.启用模块).toContain('kintaiyi 全解释盘（統宗寶鑑诸卷）');
+    // 未提供时不出现该字段
+    const without = JSON.parse(toJSONText({ result }));
+    expect(without.kintaiyiPan).toBeUndefined();
+  });
+
   it('Markdown 含全部章节与关键数据', () => {
     const md = toMarkdown({
       result,
