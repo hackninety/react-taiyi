@@ -45,21 +45,21 @@ describe('导出', () => {
   });
 
   it('meta 标注流派明细，防错乱', () => {
-    const huangji = calculateHuangji(2026, '祝泌', {
-      monthGz: result.ganzhi[1], dayGz: result.ganzhi[2], hourBranch: result.ganzhi[3][1],
+    const huangji = calculateHuangji(2026, {
+      month: input.month, day: input.day, hour: input.hour,
     });
     const meta = buildMeta({ result, huangji });
     expect(meta.太乙积年流派).toContain('太乙統宗');
     expect(meta.太乙积年流派).toContain('10,153,917');
-    expect(meta.皇极岁卦流派).toContain('祝泌');
-    expect(meta.皇极岁卦流派).toContain('仅供参考');
+    expect(meta.皇极岁卦流派).toContain('黄畿');
+    expect(meta.皇极岁卦流派).toContain('已校订原文');
     expect(meta.启用模块).toContain('皇极经世历');
     expect(meta.流派声明).toContain('不可混用');
   });
 
   it('analysisContext 归集太乙与皇极要点', () => {
-    const huangji = calculateHuangji(2026, '黄畿', {
-      monthGz: result.ganzhi[1], dayGz: result.ganzhi[2], hourBranch: result.ganzhi[3][1],
+    const huangji = calculateHuangji(2026, {
+      month: input.month, day: input.day, hour: input.hour,
     });
     const ctx = buildAnalysisContext({ result, huangji }) as Record<string, unknown>;
     expect(ctx.太乙盘要).toContain(result.kook.text);
@@ -68,15 +68,15 @@ describe('导出', () => {
     expect(ctx.皇极大势).toContain('岁卦');
   });
 
-  it('Markdown 含排盘明细与断事归集，标注祝泌参考状态', () => {
-    const huangji = calculateHuangji(2026, '祝泌', {
-      monthGz: result.ganzhi[1], dayGz: result.ganzhi[2], hourBranch: result.ganzhi[3][1],
+  it('Markdown 含排盘明细与断事归集，标注黄畿已校订状态', () => {
+    const huangji = calculateHuangji(2026, {
+      month: input.month, day: input.day, hour: input.hour,
     });
     const md = toMarkdown({ result, huangji });
     expect(md).toContain('## 排盘明细');
     expect(md).toContain('## 断事要点归集');
     expect(md).toContain('太乙积年流派');
-    expect(md).toContain('未校订·仅供参考');
+    expect(md).toContain('黄畿派 · 已校订原文');
   });
 
   it('AI Prompt 含分析框架与完整 JSON', () => {
@@ -92,7 +92,7 @@ describe('导出', () => {
 });
 
 describe('仅皇极模式导出（太乙范围外）', () => {
-  const huangji = calculateHuangji(-2356, '黄畿', { month: 3, day: 15, hour: 12 });
+  const huangji = calculateHuangji(-2356, { month: 3, day: 15, hour: 12 });
   const payload = {
     result: null,
     huangji,

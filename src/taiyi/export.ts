@@ -8,7 +8,7 @@
 import type { AcumYear, GongName, TaiyiResult } from './types';
 import type { MingfaResult } from './mingfa';
 import type { SolarTimeInfo } from './solartime';
-import type { HuangjiInfo, HuangjiSchool } from './huangji';
+import type { HuangjiInfo } from './huangji';
 import { formatGregorianYearCn } from './huangji';
 import { SIXTEEN_GOD, NUM_TO_GONG } from './constants';
 
@@ -30,7 +30,6 @@ export interface ExportPayload {
 const ACUM_CONST: Record<AcumYear, number> = { 0: 10153917, 1: 1936557, 2: 10154193, 3: 10153917 };
 
 /** 皇极流派简明校验标签 */
-const schoolTag = (s: HuangjiSchool) => (s === '黄畿' ? '已校订原文' : '未校订·仅供参考');
 
 const gongText = (n: number) => `${'一二三四五六七八九'[n - 1]}宮（${NUM_TO_GONG[n]}）`;
 const hx = (h: { name: string; symbol: string }) => `${h.name}${h.symbol}`;
@@ -40,10 +39,10 @@ function huangjiSummary(huangji: HuangjiInfo): string {
   return (
     `${formatGregorianYearCn(huangji.huangjiYear - 67017)}值${huangji.hui.branch}会（第 ${huangji.hui.ordinal} 会，辟卦 ${hx(huangji.hui.hexagram)}）、` +
     `元内第 ${huangji.yun.global} 运（运卦 ${hx(huangji.yun.hexagram)}）、第 ${huangji.shi.global} 世（世卦 ${hx(huangji.shi.hexagram)}）、世内第 ${huangji.shi.yearInShi} 年；` +
-    `本年岁卦（${huangji.school}派）${hx(huangji.sui)}` +
-    `${huangji.suiOther.hexagram.name !== huangji.sui.name ? `（${huangji.suiOther.school}派作 ${hx(huangji.suiOther.hexagram)}）` : `（${huangji.suiOther.school}派同）`}；` +
-    `十年卦 ${hx(huangji.decade.hexagram)}。` +
-    `皇极经世以元会运世观千年之势，可为断局提供大时代背景；${huangji.school}派${huangji.schoolNote}。`
+    `本年岁卦（黄畿派）${hx(huangji.sui)}；` +
+    `十年卦 ${hx(huangji.decade.hexagram)}；` +
+    `皇极岁内第 ${huangji.dayOfYear} 日 —— 月经卦 ${hx(huangji.yueJing)}、旬纬卦 ${hx(huangji.xunWei)}、日卦 ${hx(huangji.day)}、时经卦 ${hx(huangji.shiJing)}（${huangji.subYearNote}）。` +
+    `皇极经世以元会运世观千年之势，可为断局提供大时代背景；${huangji.algorithmNote}。`
   );
 }
 
@@ -99,10 +98,8 @@ export function buildMeta({ result: r, mingfa, planets, solarTime, huangji }: Ex
       }),
     ...(huangji
       ? {
-        皇极岁卦流派: `${huangji.school}（${schoolTag(huangji.school)}；${huangji.schoolNote}）`,
-        皇极月日时卦口径: huangji.monthDayHourSource === '四柱'
-          ? '按太乙盘四柱干支起（与主盘同口径）'
-          : '按公历日期起（拟推格里历 + 天文节气推月建，日卦按纪日干支连续推算；古远年份民用日期可能有 ±1 日级差异）',
+        皇极岁卦流派: `黄畿（已校订原文；${huangji.algorithmNote}）`,
+        皇极月日时卦口径: `${huangji.subYearNote}（皇极岁内第 ${huangji.dayOfYear} 日）`,
       }
       : {}),
     启用模块: modules,
@@ -200,14 +197,15 @@ const BOARD_ORDER: GongName[] = [
 function pushHuangjiSection(L: string[], huangji: HuangjiInfo): void {
   L.push('## 皇极经世历');
   L.push('');
-  L.push(`- 岁卦流派：**${huangji.school}派** · ${schoolTag(huangji.school)} — ${huangji.schoolNote}`);
+  L.push(`- 岁卦流派：**黄畿派** · 已校订原文 — ${huangji.algorithmNote}`);
   L.push(`- 皇极纪年：第 ${huangji.huangjiYear} 年（元起于公元前 67017 年，一元 129,600 年），对应${formatGregorianYearCn(huangji.huangjiYear - 67017)}`);
   L.push(`- 会：${huangji.hui.branch}会（第 ${huangji.hui.ordinal} 会）· 辟卦 ${hx(huangji.hui.hexagram)} · 会内第 ${huangji.hui.yearInHui} 年`);
   L.push(`- 运：元内第 ${huangji.yun.global} 运 · 运卦 ${hx(huangji.yun.hexagram)}（主卦${huangji.yun.master.name}变${huangji.yun.yaoName}爻）· 运内第 ${huangji.yun.yearInYun} 年`);
   L.push(`- 世：元内第 ${huangji.shi.global} 世 · 世卦 ${hx(huangji.shi.hexagram)} · 世内第 ${huangji.shi.yearInShi} 年`);
   L.push(`- 十年卦：${hx(huangji.decade.hexagram)}（世卦变${huangji.decade.yaoName}爻，黄畿注口径）`);
-  L.push(`- 岁卦（${huangji.school}派）：${hx(huangji.sui)}（${huangji.suiOther.school}派作 ${hx(huangji.suiOther.hexagram)}）`);
-  L.push(`- 月卦 / 日卦 / 时卦：${hx(huangji.month)} / ${hx(huangji.day)} / ${hx(huangji.hour)}（按${huangji.monthDayHourSource}起）`);
+  L.push(`- 岁卦（黄畿派）：${hx(huangji.sui)}`);
+  L.push(`- 皇极岁内第 ${huangji.dayOfYear} 日 · 月经卦 / 旬纬卦 / 日卦 / 时经卦：${hx(huangji.yueJing)} / ${hx(huangji.xunWei)} / ${hx(huangji.day)} / ${hx(huangji.shiJing)}`);
+  L.push(`  - 推法：${huangji.subYearNote}`);
   L.push('');
 }
 
@@ -228,7 +226,7 @@ function toHuangjiOnlyMarkdown(payload: ExportPayload): string {
   L.push('|---|---|');
   L.push(`| 太乙主盘 | ${meta.太乙主盘 ?? '—'} |`);
   if (huangji) {
-    L.push(`| 皇极岁卦流派 | ${huangji.school}派 · ${schoolTag(huangji.school)} |`);
+    L.push(`| 皇极岁卦流派 | 黄畿派 · 已校订原文 |`);
     L.push(`| 月日时卦口径 | ${meta.皇极月日时卦口径 ?? '—'} |`);
   }
   if (huangjiOnlyInput) {
@@ -270,7 +268,7 @@ export function toMarkdown(payload: ExportPayload): string {
   L.push(`| 太乙积年流派 | ${meta.太乙积年流派} |`);
   L.push(`| 历法口径 | ${meta.历法口径} |`);
   L.push(`| 真太阳时 | ${meta.真太阳时} |`);
-  if (huangji) L.push(`| 皇极岁卦流派 | ${huangji.school}派 · ${schoolTag(huangji.school)} |`);
+  if (huangji) L.push(`| 皇极岁卦流派 | 黄畿派 · 已校订原文 |`);
   L.push(`| 启用模块 | ${meta.启用模块.join('、')} |`);
   L.push('');
   L.push(`> ⚠️ ${meta.流派声明}`);

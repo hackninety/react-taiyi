@@ -11,6 +11,6 @@ export { applyTrueSolarTime, browserTimeZone, browserTzOffsetMinutes, tzAutoLoca
 export type { SolarTimeInfo } from './solartime';
 export {
   calculateHuangji, formatGregorianYearCn,
-  HUANGJI_SCHOOL_NOTE, HUANGJI_DEFAULT_SCHOOL, HUANGJI_MIN_YEAR, HUANGJI_MAX_YEAR,
+  HUANGJI_ALGORITHM_NOTE, HUANGJI_SUBYEAR_NOTE, HUANGJI_MIN_YEAR, HUANGJI_MAX_YEAR,
 } from './huangji';
-export type { HuangjiInfo, HuangjiSchool, HuangjiPillarSource } from './huangji';
+export type { HuangjiInfo, HuangjiPillarSource } from './huangji';

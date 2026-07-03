@@ -1,4 +1,4 @@
-import type { AcumYear, HuangjiSchool, JiStyle, Sex, TaiyiInput } from '../taiyi';
+import type { AcumYear, JiStyle, Sex, TaiyiInput } from '../taiyi';
 import {
   JI_NAME, METHOD_NAME,
   TAIYI_MIN_YEAR, TAIYI_MAX_YEAR, HUANGJI_MIN_YEAR, HUANGJI_MAX_YEAR,
@@ -28,8 +28,6 @@ interface Props {
   tenjingLoading: boolean;
   showHuangji: boolean;
   onShowHuangjiChange: (v: boolean) => void;
-  huangjiSchool: HuangjiSchool;
-  onHuangjiSchoolChange: (s: HuangjiSchool) => void;
   solar: SolarTimeSetting;
   onSolarChange: (s: SolarTimeSetting) => void;
   /** 校正说明文本（生效时显示） */
@@ -40,7 +38,7 @@ export function InputPanel({
   value, onChange, sex, onSexChange,
   showMingfa, onShowMingfaChange,
   showTenjing, onShowTenjingChange, tenjingLoading,
-  showHuangji, onShowHuangjiChange, huangjiSchool, onHuangjiSchoolChange,
+  showHuangji, onShowHuangjiChange,
   solar, onSolarChange, solarHint,
 }: Props) {
   const set = (patch: Partial<TaiyiInput>) => onChange({ ...value, ...patch });
@@ -233,16 +231,7 @@ export function InputPanel({
             />
             皇极
           </label>
-          {showHuangji && (
-            <select
-              aria-label="皇极流派"
-              value={huangjiSchool}
-              onChange={(ev) => onHuangjiSchoolChange(ev.target.value as HuangjiSchool)}
-            >
-              <option value="黄畿">黄畿派（已校订原文）</option>
-              <option value="祝泌">祝泌派（未校订·参考）</option>
-            </select>
-          )}
+          {showHuangji && <span className="school-badge ok">黄畿派 · 已校订原文</span>}
         </div>
       </div>
 

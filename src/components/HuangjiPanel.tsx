@@ -14,15 +14,8 @@ export function HuangjiPanel({ info: h }: Props) {
     <section className="card">
       <h3>
         皇极经世历
-        <span className={`school-badge ${h.school === '祝泌' ? 'warn' : 'ok'}`}>
-          {h.school}派 · {h.school === '黄畿' ? '已校订原文' : '未校订·仅供参考'}
-        </span>
+        <span className="school-badge ok">黄畿派 · 已校订原文</span>
       </h3>
-      {h.school === '祝泌' && (
-        <p className="school-warn">
-          ⚠ 祝泌派岁卦暂未对照《皇极经世书解》原文，仅经第三方数据交叉验证，结果仅供参考；默认建议用黄畿派。
-        </p>
-      )}
       <div className="row">
         <span className="row-label">皇极纪年</span>
         <span className="row-value">
@@ -56,30 +49,27 @@ export function HuangjiPanel({ info: h }: Props) {
         </span>
       </div>
       <div className="row">
-        <span className="row-label">岁卦（{h.school}）</span>
+        <span className="row-label">岁卦（黄畿）</span>
         <span className="row-value">
           <Hex h={h.sui} />
-          <em>（{h.suiOther.school}派作 {h.suiOther.hexagram.name}{h.suiOther.hexagram.symbol}）</em>
         </span>
       </div>
       <div className="row">
-        <span className="row-label">月 / 日 / 时卦</span>
+        <span className="row-label">月经 / 旬纬 / 日 / 时经卦</span>
         <span className="row-value">
-          <Hex h={h.month} /> / <Hex h={h.day} /> / <Hex h={h.hour} />
-          <em>
-            {h.monthDayHourSource === '四柱'
-              ? '（按太乙盘四柱起）'
-              : '（按公历日期起：拟推格里历+天文节气，古远年份民用日期或有 ±1 日差）'}
-          </em>
+          <Hex h={h.yueJing} /> / <Hex h={h.xunWei} /> / <Hex h={h.day} /> / <Hex h={h.shiJing} />
+          <em>（皇极岁内第 {h.dayOfYear} 日；{h.subYearNote}）</em>
         </span>
       </div>
       <p className="mingfa-note">
         皇极经世为邵雍以易数纪史之历：元统十二会、会统三十运、运统十二世、世统三十年，
         一元全跨度公元前 67016 — 公元 62583 均可推算（勾选「皇极」后年份输入即解锁全跨度；
         公元 600–9999 外的太乙盘自动切换为「皇极历法拟推口径」，见局式卡标注）。
-        运卦世卦两派同法；岁卦黄畿用「运卦变经卦、挨六十卦次」（已对照原文校验，默认），
-        祝泌《观物篇解》用「先天六十卦序平推」（未对照原文，仅供参考），可在上方切换。
-        月卦日卦依「日甲月子，合乎为复」起，时卦取十二消息卦。
+        岁卦用黄畿「运卦变经卦、挨六十卦次」（已对照《皇极经世书》黄畿注原文校验，84 个文献锚点）；
+        祝泌《观物篇解》一派暂未对照原文，已关闭不用。
+        岁以下月/日/时卦取黄畿「岁卦逐层变爻·挨卦」纯正推法：岁卦→月经卦（变爻，60日/双月）
+        →旬纬卦（10日/旬）→日卦（月经卦位置起挨六十卦次）→时经卦（日卦变爻，2时辰/卦，自子半起），
+        皇极以冬至换岁定位年内天数（1–360）。
         算法直接引用开源库 yhys-core（github:hackninety/react-yhys），随上游更新。
       </p>
     </section>

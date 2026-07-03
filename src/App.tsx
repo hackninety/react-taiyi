@@ -4,7 +4,7 @@ import {
   applyTrueSolarTime, browserTzOffsetMinutes, tzAutoLocation,
   formatGregorianYearCn, TAIYI_MIN_YEAR, TAIYI_MAX_YEAR,
 } from './taiyi';
-import type { HuangjiInfo, HuangjiSchool, MingfaResult, Sex, SolarTimeInfo, TaiyiInput, TaiyiResult } from './taiyi';
+import type { HuangjiInfo, MingfaResult, Sex, SolarTimeInfo, TaiyiInput, TaiyiResult } from './taiyi';
 import { findLongitude } from './lib/cities';
 import { InputPanel } from './components/InputPanel';
 import type { SolarTimeSetting } from './components/InputPanel';
@@ -46,7 +46,6 @@ export default function App() {
   const [tenjingReady, setTenjingReady] = useState(false);
   const [tenjingError, setTenjingError] = useState<string | null>(null);
   const [showHuangji, setShowHuangji] = useState(false);
-  const [huangjiSchool, setHuangjiSchool] = useState<HuangjiSchool>('黄畿');
   const [solar, setSolar] = useState<SolarTimeSetting>({
     enabled: false,
     mode: 'auto',
@@ -140,14 +139,13 @@ export default function App() {
   const { huangji, huangjiError } = useMemo<{ huangji: HuangjiInfo | null; huangjiError: string | null }>(() => {
     if (!showHuangji) return { huangji: null, huangjiError: null };
     try {
-      const source = result
-        ? { monthGz: result.ganzhi[1], dayGz: result.ganzhi[2], hourBranch: result.ganzhi[3][1] }
-        : { month: effectiveInput.month, day: effectiveInput.day, hour: effectiveInput.hour };
-      return { huangji: calculateHuangji(effectiveInput.year, huangjiSchool, source), huangjiError: null };
+      // 皇极月/日/时卦一律按公历日期（冬至换岁）逐层推演，与太乙盘四柱脱钩
+      const source = { month: effectiveInput.month, day: effectiveInput.day, hour: effectiveInput.hour };
+      return { huangji: calculateHuangji(effectiveInput.year, source), huangjiError: null };
     } catch (e) {
       return { huangji: null, huangjiError: e instanceof Error ? e.message : String(e) };
     }
-  }, [showHuangji, huangjiSchool, effectiveInput, result]);
+  }, [showHuangji, effectiveInput]);
 
   const solarHint = solarInfo.applied
     ? `${solarInfo.place}（${formatUtcOffset(solarInfo.tzOffsetMinutes!)}）${solarInfo.offsetMinutes! >= 0 ? '+' : ''}${solarInfo.offsetMinutes} 分钟 → ${String(solarInfo.adjusted!.hour).padStart(2, '0')}:${String(solarInfo.adjusted!.minute).padStart(2, '0')} 起局`
@@ -160,7 +158,7 @@ export default function App() {
         <header className="app-header">
           <h1>太乙神数</h1>
           <p className="subtitle">
-            三式之首 · 年月日时分五计式 · 算法汇集自开源项目 kintaiyi / taiyipython
+            三式之首 · 年月日时分五计式
           </p>
           <nav className="view-tabs">
             <button
@@ -195,8 +193,6 @@ export default function App() {
           tenjingLoading={showTenjing && !tenjingReady && !tenjingError}
           showHuangji={showHuangji}
           onShowHuangjiChange={setShowHuangji}
-          huangjiSchool={huangjiSchool}
-          onHuangjiSchoolChange={setHuangjiSchool}
           solar={solar}
           onSolarChange={setSolar}
           solarHint={solarHint}
