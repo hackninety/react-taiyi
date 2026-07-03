@@ -621,6 +621,42 @@ body {
   line-height: 1.6;
 }
 
+/* 皇极流派标注 */
+.school-badge {
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: normal;
+  letter-spacing: 0;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+  text-shadow: none;
+}
+
+.school-badge.ok {
+  color: #86d993;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.school-badge.warn {
+  color: #e6b566;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+
+.school-warn {
+  margin: 2px 0 8px;
+  font-size: 0.78rem;
+  color: #e6b566;
+  background: rgba(212, 175, 55, 0.08);
+  border-left: 3px solid var(--gold);
+  padding: 6px 10px;
+  line-height: 1.6;
+  border-radius: 0 6px 6px 0;
+}
+
 /* 皇极经世卦名 */
 .hj-hex {
   color: var(--gold-light);

@@ -174,8 +174,8 @@ export function InputPanel({
               value={huangjiSchool}
               onChange={(ev) => onHuangjiSchoolChange(ev.target.value as HuangjiSchool)}
             >
-              <option value="黄畿">黄畿派</option>
-              <option value="祝泌">祝泌派</option>
+              <option value="黄畿">黄畿派（已校订原文）</option>
+              <option value="祝泌">祝泌派（未校订·参考）</option>
             </select>
           )}
         </div>

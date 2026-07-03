@@ -16,10 +16,13 @@
 - **皇极经世历**（可切换流派）：任一起局年份给出邵雍元会运世坐标
   （一元 129,600 年 = 12 会 × 30 运 × 12 世 × 30 年，元起于公元前 67017 年）
   与逐层值卦：会辟卦、运卦（主卦变爻）、世卦、十年卦、岁卦、月日时卦；
-  岁卦支持**黄畿**（运卦→经卦→挨六十卦次）与**祝泌**（先天六十卦序平推）两派切换并互注对照。
-  算法与验证锚点（1984=鼎 … 2026=同人 等 17 例）移植自姊妹项目 react-yhys
-- **一键导出**：复制/下载 JSON 与 Markdown，附**一键复制 AI Prompt**
-  （内置太乙分析框架提示词 + 全量排盘 JSON，粘贴给 ChatGPT / Claude 即可分析）
+  岁卦支持**黄畿**（运卦→经卦→挨六十卦次，已对照原文校验，**默认**）与
+  **祝泌**（先天六十卦序平推，未对照原文，仅供参考）两派切换并互注对照。
+  算法**直接引用**开源库 [`yhys-core`](https://github.com/hackninety/react-yhys)
+  （`npm i github:hackninety/react-yhys`），随上游更新而更新
+- **AI 导出**：复制/下载 JSON 与 Markdown，均在开头附 `meta`（口径明细，重点标注太乙积年流派
+  与皇极岁卦流派，防止多流派数据混用）与 `analysisContext`（程序预先归集的断事要点）；
+  另有**一键复制 AI Prompt**，引导 AI 先锁定流派口径再展开分析
 
 ## 算法来源
 
@@ -29,7 +32,7 @@
 | [wlhyl/taiyipython](https://github.com/wlhyl/taiyipython) | 推导式算法交叉验证（金镜积年、十六神盘循环累加求算、三基/五福起例） |
 | [hhszzzz/taibu](https://github.com/hhszzzz/taibu) | 工程架构参考（domain 分层）；其“太乙”为九星简化视角，未采用 |
 | [dglijin-oss/taiyi-skill](https://github.com/dglijin-oss/taiyi-skill) | 格局解读规则参考 |
-| react-yhys（姊妹项目） | 皇极经世历：元会运世层级、先天六十卦序、黄畿/祝泌两派岁卦算法与验证锚点 |
+| [yhys-core / react-yhys](https://github.com/hackninety/react-yhys)（姊妹项目，git 依赖引用） | 皇极经世历：元会运世层级、先天六十卦序、黄畿（已校订原文）/祝泌（未校订）两派岁卦算法。作为 npm 包直接引用，随上游更新 |
 | react-8char（姊妹项目） | 真太阳时城市经度表与视觉风格 |
 
 历法（干支 / 节气 / 农历）由 [lunar-typescript](https://github.com/6tail/lunar-typescript) 提供，

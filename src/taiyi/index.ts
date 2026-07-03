@@ -8,5 +8,5 @@ export { toJSONText, toMarkdown } from './export';
 export type { ExportPayload } from './export';
 export { applyTrueSolarTime } from './solartime';
 export type { SolarTimeInfo } from './solartime';
-export { calculateHuangji } from './huangji';
+export { calculateHuangji, HUANGJI_SCHOOL_NOTE, HUANGJI_DEFAULT_SCHOOL } from './huangji';
 export type { HuangjiInfo, HuangjiSchool } from './huangji';

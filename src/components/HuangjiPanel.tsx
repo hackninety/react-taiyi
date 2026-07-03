@@ -11,7 +11,17 @@ function Hex({ h }: { h: { name: string; symbol: string } }) {
 export function HuangjiPanel({ info: h }: Props) {
   return (
     <section className="card">
-      <h3>皇极经世历</h3>
+      <h3>
+        皇极经世历
+        <span className={`school-badge ${h.school === '祝泌' ? 'warn' : 'ok'}`}>
+          {h.school}派 · {h.school === '黄畿' ? '已校订原文' : '未校订·仅供参考'}
+        </span>
+      </h3>
+      {h.school === '祝泌' && (
+        <p className="school-warn">
+          ⚠ 祝泌派岁卦暂未对照《皇极经世书解》原文，仅经第三方数据交叉验证，结果仅供参考；默认建议用黄畿派。
+        </p>
+      )}
       <div className="row">
         <span className="row-label">皇极纪年</span>
         <span className="row-value">
@@ -59,9 +69,10 @@ export function HuangjiPanel({ info: h }: Props) {
       </div>
       <p className="mingfa-note">
         皇极经世为邵雍以易数纪史之历：元统十二会、会统三十运、运统十二世、世统三十年。
-        运卦世卦两派同法；岁卦黄畿用「运卦变经卦、挨六十卦次」，祝泌《观物篇解》用「先天六十卦序平推」，
-        可在上方切换。月卦日卦依「日甲月子，合乎为复」以本盘月柱日柱起，时卦取十二消息卦。
-        算法与验证数据移植自开源项目 react-yhys。
+        运卦世卦两派同法；岁卦黄畿用「运卦变经卦、挨六十卦次」（已对照原文校验，默认），
+        祝泌《观物篇解》用「先天六十卦序平推」（未对照原文，仅供参考），可在上方切换。
+        月卦日卦依「日甲月子，合乎为复」以本盘月柱日柱起，时卦取十二消息卦。
+        算法直接引用开源库 yhys-core（github:hackninety/react-yhys），随上游更新。
       </p>
     </section>
   );

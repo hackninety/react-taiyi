@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { calculateTaiyi, applyTrueSolarTime } from '../src/taiyi';
+import { calculateTaiyi, calculateHuangji, applyTrueSolarTime } from '../src/taiyi';
 import { calculateMingfa } from '../src/taiyi/mingfa';
-import { toJSONText, toMarkdown } from '../src/taiyi/export';
+import { toJSONText, toMarkdown, buildMeta, buildAnalysisContext } from '../src/taiyi/export';
 import { generateAIPrompt } from '../src/lib/prompt';
 import { findLongitude } from '../src/lib/cities';
 
@@ -42,6 +42,41 @@ describe('导出', () => {
     const md = toMarkdown({ result });
     expect(md).not.toContain('## 太乙命法');
     expect(md).not.toContain('## 十精');
+  });
+
+  it('meta 标注流派明细，防错乱', () => {
+    const huangji = calculateHuangji(2026, '祝泌', {
+      monthGz: result.ganzhi[1], dayGz: result.ganzhi[2], hourBranch: result.ganzhi[3][1],
+    });
+    const meta = buildMeta({ result, huangji });
+    expect(meta.太乙积年流派).toContain('太乙統宗');
+    expect(meta.太乙积年流派).toContain('10,153,917');
+    expect(meta.皇极岁卦流派).toContain('祝泌');
+    expect(meta.皇极岁卦流派).toContain('仅供参考');
+    expect(meta.启用模块).toContain('皇极经世历');
+    expect(meta.流派声明).toContain('不可混用');
+  });
+
+  it('analysisContext 归集太乙与皇极要点', () => {
+    const huangji = calculateHuangji(2026, '黄畿', {
+      monthGz: result.ganzhi[1], dayGz: result.ganzhi[2], hourBranch: result.ganzhi[3][1],
+    });
+    const ctx = buildAnalysisContext({ result, huangji }) as Record<string, unknown>;
+    expect(ctx.太乙盘要).toContain(result.kook.text);
+    expect(Array.isArray(ctx.格局)).toBe(true);
+    expect(ctx.皇极大势).toContain('会');
+    expect(ctx.皇极大势).toContain('岁卦');
+  });
+
+  it('Markdown 含排盘明细与断事归集，标注祝泌参考状态', () => {
+    const huangji = calculateHuangji(2026, '祝泌', {
+      monthGz: result.ganzhi[1], dayGz: result.ganzhi[2], hourBranch: result.ganzhi[3][1],
+    });
+    const md = toMarkdown({ result, huangji });
+    expect(md).toContain('## 排盘明细');
+    expect(md).toContain('## 断事要点归集');
+    expect(md).toContain('太乙积年流派');
+    expect(md).toContain('未校订·仅供参考');
   });
 
   it('AI Prompt 含分析框架与完整 JSON', () => {
