@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import type { TaiyiResult } from '../taiyi';
+import type { SolarTimeInfo, TaiyiResult } from '../taiyi';
 import { NUM_TO_GONG } from '../taiyi';
 
 interface Props {
   result: TaiyiResult;
+  solarInfo?: SolarTimeInfo;
 }
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -17,13 +18,18 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 const gongText = (n: number) => `${'一二三四五六七八九'[n - 1]}宮（${NUM_TO_GONG[n]}）`;
 
-export function ResultPanel({ result }: Props) {
+export function ResultPanel({ result, solarInfo }: Props) {
   const r = result;
   return (
     <>
       <section className="card">
         <h3>局式</h3>
         <Row label="太乙计">{r.jiName} · {r.methodName}</Row>
+        {solarInfo?.applied && (
+          <Row label="真太阳时">
+            {solarInfo.place}（东经 {solarInfo.longitude}°）校正 {solarInfo.offsetMinutes! >= 0 ? '+' : ''}{solarInfo.offsetMinutes} 分钟
+          </Row>
+        )}
         <Row label="四柱">
           {r.ganzhi[0]}年 {r.ganzhi[1]}月 {r.ganzhi[2]}日 {r.ganzhi[3]}时
           {r.input.jiStyle === 4 ? ` ${r.ganzhi[4]}分` : ''}

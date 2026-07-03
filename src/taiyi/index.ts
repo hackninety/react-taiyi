@@ -6,3 +6,5 @@ export type { MingfaResult, Sex } from './mingfa';
 export { loadStarsData, findStars, starsLoaded } from './tenjing';
 export { toJSONText, toMarkdown } from './export';
 export type { ExportPayload } from './export';
+export { applyTrueSolarTime } from './solartime';
+export type { SolarTimeInfo } from './solartime';

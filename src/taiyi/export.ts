@@ -3,6 +3,7 @@
  */
 import type { GongName, TaiyiResult } from './types';
 import type { MingfaResult } from './mingfa';
+import type { SolarTimeInfo } from './solartime';
 import { SIXTEEN_GOD, NUM_TO_GONG } from './constants';
 
 export interface ExportPayload {
@@ -10,13 +11,16 @@ export interface ExportPayload {
   mingfa?: MingfaResult | null;
   /** 十精：地支 -> 行星 */
   planets?: Record<string, string[]> | null;
+  /** 真太阳时校正信息 */
+  solarTime?: SolarTimeInfo | null;
 }
 
-export function toJSONText({ result, mingfa, planets }: ExportPayload): string {
+export function toJSONText({ result, mingfa, planets, solarTime }: ExportPayload): string {
   return JSON.stringify(
     {
       app: 'react-taiyi',
       exportedAt: new Date().toISOString(),
+      ...(solarTime?.applied ? { solarTime } : {}),
       result,
       ...(mingfa ? { mingfa } : {}),
       ...(planets ? { tenJing: planets } : {}),
@@ -32,7 +36,7 @@ const BOARD_ORDER: GongName[] = [
   '巳', '午', '未', '坤', '申', '酉', '戌', '乾', '亥', '子', '丑', '艮', '寅', '卯', '辰', '巽', '中',
 ];
 
-export function toMarkdown({ result: r, mingfa, planets }: ExportPayload): string {
+export function toMarkdown({ result: r, mingfa, planets, solarTime }: ExportPayload): string {
   const L: string[] = [];
   const { input } = r;
   const pad = (n: number, w = 2) => String(n).padStart(w, '0');
@@ -40,6 +44,9 @@ export function toMarkdown({ result: r, mingfa, planets }: ExportPayload): strin
   L.push(`# 太乙神数排盘 · ${r.jiName} · ${r.methodName}`);
   L.push('');
   L.push(`- 公历：${pad(input.year, 4)}-${pad(input.month)}-${pad(input.day)} ${pad(input.hour)}:${pad(input.minute)}`);
+  if (solarTime?.applied) {
+    L.push(`- 真太阳时：已按 ${solarTime.place}（东经 ${solarTime.longitude}°）校正 ${solarTime.offsetMinutes! >= 0 ? '+' : ''}${solarTime.offsetMinutes} 分钟，上行公历为校正后时间`);
+  }
   L.push(`- 四柱：${r.ganzhi[0]}年 ${r.ganzhi[1]}月 ${r.ganzhi[2]}日 ${r.ganzhi[3]}时（分柱 ${r.ganzhi[4]}）`);
   L.push(`- 农历：${r.lunar.text} · 节气：${r.jieqi}`);
   L.push(`- 纪元：${r.jiyuan} · 积数：${r.kook.accNum}`);
