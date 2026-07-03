@@ -864,7 +864,7 @@ body {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin: 14px 0 0;
+  margin: 14px 0 16px;   /* 底部留距，避免与下方盘面贴边 */
   padding: 10px 14px;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
@@ -880,11 +880,48 @@ body {
   white-space: nowrap;
 }
 
+/* 数据源下拉与 API 输入：跟随全站表单风格（面板底+暗色+聚焦辉光） */
+.src-label select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color-scheme: dark;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.src-label select:hover { border-color: var(--line-strong); }
+
+.src-label select:focus {
+  outline: none;
+  border-color: var(--crimson-light);
+  box-shadow: 0 0 0 2px rgba(220, 88, 88, 0.18);
+}
+
 .api-input {
   min-width: 220px;
   flex: 0 1 260px;
   font-size: 0.78rem;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: inherit;
+  color-scheme: dark;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.api-input:hover { border-color: var(--line-strong); }
+
+.api-input:focus {
+  outline: none;
+  border-color: var(--crimson-light);
+  box-shadow: 0 0 0 2px rgba(220, 88, 88, 0.18);
 }
 
 .src-chip {
