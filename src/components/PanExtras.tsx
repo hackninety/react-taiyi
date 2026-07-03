@@ -70,8 +70,9 @@ export function TongyunExtra({ vol12, input, apiBase }: {
 
   const runQuery = () => {
     const y = Number(qYear);
-    if (!Number.isFinite(y) || y < 600 || y > 9999) {
-      setQ({ phase: 'err', reason: '查询年须在 600–9999（kintaiyi 历法范围）' });
+    // kintaiyi/sxtwl 古历实测支持至公元前约 6000 年（负数=公元前 N 年直记）
+    if (!Number.isFinite(y) || y < -6000 || y > 9999 || y === 0) {
+      setQ({ phase: 'err', reason: '查询年范围 -6000–9999（负数即公元前 N 年，无 0 年）' });
       return;
     }
     setQ({ phase: 'loading' });

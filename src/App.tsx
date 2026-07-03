@@ -414,8 +414,7 @@ export default function App() {
         </div>
 
         <footer className="app-footer">
-          算法参照 <a href="https://github.com/kentang2017/kintaiyi" target="_blank" rel="noreferrer">kentang2017/kintaiyi</a>（MIT）
-          与 <a href="https://github.com/wlhyl/taiyipython" target="_blank" rel="noreferrer">wlhyl/taiyipython</a>；
+          算法参照 <a href="https://github.com/kentang2017/kintaiyi" target="_blank" rel="noreferrer">kentang2017/kintaiyi</a>（MIT）；
           历法由 lunar-typescript 提供。仅供术数文化研究。
         </footer>
       </div>

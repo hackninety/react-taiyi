@@ -44,7 +44,7 @@ const SECTIONS: Section[] = [
         <p>
           本应用内置的本地 TS 引擎可<strong>完全离线</strong>出盘（在「数据源」切换为「仅本地引擎」即不联网、不上传任何数据）；
           默认<strong>「后端优先」</strong>则会把起局时间上送 python-taiyi 后端（直接运行上游 kintaiyi 源码）以取权威一致结果，
-          并与本地引擎逐字段对照。算法参照开源项目 kintaiyi 与 taiyipython，并经 300+ 用例与参考实现逐字段对照验证。
+          并与本地引擎逐字段对照。算法参照开源权威实现 kentang2017/kintaiyi，并经 300+ 用例逐字段对照验证。
           太乙神数属传统术数文化，本工具仅供文化研究与学习参考。
         </p>
       </>
@@ -250,7 +250,7 @@ const SECTIONS: Section[] = [
             ['提挟', '文昌始击分居太乙两侧', '二目挟君，政由大臣、下专其权'],
             ['执提', '太乙与开生门同宫或对冲', '门户受制，不可举事'],
             ['四郭固', '目临太乙宫且主客将相关联', '坚壁固守之象，宜守不宜攻'],
-            ['四郭杜', '文昌临客将宫且主客将参相关', '四面杜塞，闭而不通（采自 taiyipython 推导式规则）'],
+            ['四郭杜', '文昌临客将宫且主客将参相关', '四面杜塞，闭而不通（本项目依四郭之义增补，kintaiyi 未收录）'],
           ]}
         />
         <p className="gnote">无任何格局时称「主客清明」，谋为通畅。</p>
@@ -443,15 +443,15 @@ const SECTIONS: Section[] = [
       <>
         <ul>
           <li><strong>太乙主盘</strong>支持公元 <strong>600–9999</strong> 年：积日在 1582-10-15 之前按儒略历、之后按格里历衔接，
-            与参考实现一致；隋唐、宋元古局均可起。公元前太乙盘暂不支持（所依历法库无上古历表）。</li>
+            与参考实现一致；隋唐、宋元古局均可起。公元前与公元 600 年前的盘走下条「皇极拟推口径」，
+            其年计局数已与上游 kintaiyi（sxtwl 古历，原生支持公元前）经 67 条局數史例逐行对照一致。</li>
           <li><strong>勾选「皇极」解锁一元全跨度</strong>（公元前 67016 — 公元 62583）：范围外太乙盘
             自动切换「皇极历法拟推口径」（四柱纯干支算术＋天文节气，拟推格里历，农历为节气月建拟推），
             经 1582 年后共同区间与标准口径逐字段同盘的交叉验证；属现代拟推、非古历考据，盘面与导出均标注。</li>
-          <li>算法与 kintaiyi（MIT 开源，事实上的太乙参考实现）经 300+ 用例逐字段对照，
-            并以 taiyipython 的推导式算法交叉验证。</li>
+          <li>算法与 kintaiyi（MIT 开源，事实上的太乙参考实现）经 300+ 用例逐字段对照验证。</li>
           <li>晚子时（23 时）按传统进次日排日柱。</li>
           <li>节气交接以精确到分钟的天文时刻为界；不同历法实现在交接的一两分钟内可能互有出入。</li>
-          <li>所有计算均在浏览器本地完成，无任何数据上传。</li>
+          <li>本地引擎可完全离线出盘（数据源切「仅本地引擎」即不联网）；默认「后端优先」会把起局时间上送后端取权威一致结果。</li>
           <li>太乙神数为传统术数文化遗产，本工具定位于<strong>文化研究、古籍算法复原与学习交流</strong>，
             不构成任何现实决策依据。</li>
         </ul>
@@ -465,8 +465,7 @@ const SECTIONS: Section[] = [
       <>
         <ul>
           <li>典籍：《太乙金镜式经》（唐·王希明）、《太乙统宗宝鉴》、《太乙淘金歌》、《太乙秘书》</li>
-          <li>算法参考：<a href="https://github.com/kentang2017/kintaiyi" target="_blank" rel="noreferrer">kentang2017/kintaiyi</a>（MIT，移植蓝本与黄金用例）、
-            <a href="https://github.com/wlhyl/taiyipython" target="_blank" rel="noreferrer">wlhyl/taiyipython</a>（推导式交叉验证）</li>
+          <li>算法参考：<a href="https://github.com/kentang2017/kintaiyi" target="_blank" rel="noreferrer">kentang2017/kintaiyi</a>（MIT，移植蓝本、黄金用例与权威后端内核）</li>
           <li>历法：<a href="https://github.com/6tail/lunar-typescript" target="_blank" rel="noreferrer">lunar-typescript</a>（干支、节气、农历）</li>
           <li>真太阳时城市经度表与界面风格：姊妹项目 react-8char</li>
         </ul>

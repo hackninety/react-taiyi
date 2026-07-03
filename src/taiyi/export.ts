@@ -215,7 +215,7 @@ function pushHuangjiSection(L: string[], huangji: HuangjiInfo): void {
   L.push('');
 }
 
-const MD_FOOTER = '*由 react-taiyi 生成；算法参照 kentang2017/kintaiyi（MIT）与 wlhyl/taiyipython；皇极经世历引用 yhys-core（github:hackninety/react-yhys）。*';
+const MD_FOOTER = '*由 react-taiyi 生成；算法参照 kentang2017/kintaiyi（MIT）；皇极经世历引用 yhys-core（github:hackninety/react-yhys）。*';
 
 /** 仅皇极模式（起局年份超出太乙历法范围）的 Markdown */
 function toHuangjiOnlyMarkdown(payload: ExportPayload): string {

@@ -160,7 +160,7 @@ export function compareRemote(local: TaiyiResult, chart: Record<string, unknown>
   push('太岁禽星', local.yearChin, chart.year_chin);
   push('始击值宿', local.shiJiXiu, chart.sf_num);
   push('八门', Object.fromEntries(Object.entries(local.doors).map(([k, v]) => [String(k), v])), chart.doors);
-  // 格局按键集合比对；四郭杜为本地自 taiyipython 增补，上游无此格
+  // 格局按键集合比对；四郭杜为本地依古法增补，上游无此格
   push('格局', Object.keys(local.geJu).filter((k) => k !== '四郭杜').sort(), chart.geju);
   push('纪元', local.jiyuan, chart.jiyuan);
   push('五子元局', local.fiveYuanKook, chart.five_yuan);

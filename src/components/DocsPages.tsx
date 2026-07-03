@@ -70,7 +70,13 @@ export function HistoryExamplesPage({ apiBase, onPickYear }: {
     <DocShell title="局數史例" tag="docs/example.md" state={state}>
       {() => (
         <>
-          <p className="pan-note">点选年份查看史载局例；「用此年起局」可切回排盘页即时推演该年盘。</p>
+          <p className="pan-note">
+            点选年份查看史载局例；「用此年起局」切回排盘页即时推演该年盘——
+            公元 600 年前（含公元前）自动走「皇极历法拟推口径」，其年计局数与年柱已同上游
+            kintaiyi（sxtwl 古历，原生支持公元前）经本表 67 例逐行对照一致（tests/examples.test.ts 锁定）。
+            注：个别史載局数为「某元第 N 局」的元内序号口径（如前 578 年「丙子元第八局」＝丙子起数至癸未第 8 位），
+            与 1–72 连续局编号不同，属文本口径差异而非推算不合。
+          </p>
           <div className="hx-year-strip" role="tablist" aria-label="史例年份">
             {rows.map((r, i) => (
               <button

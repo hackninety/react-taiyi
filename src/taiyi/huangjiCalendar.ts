@@ -154,7 +154,10 @@ export function hjLunar(year: number, month: number, day: number): {
   const dayInJie = jdn - jie.jdn + 1;
   const yearCn = year <= 0 ? `公元前${1 - year}年` : `${year}年`;
   return {
-    year,
+    // 农历年号采用 kintaiyi/sxtwl 的「公元前直记」约定（无 0 年：天文 0=前1 → -1），
+    // 使 engine 积年公式的 BC 跨零修正（ly<0 ? +1）语义与上游同构——
+    // 经 67 条局數史例逐行对照 kintaiyi（tests/examples.test.ts）锁定
+    year: year <= 0 ? year - 1 : year,
     month: lunarMonth,
     day: dayInJie,
     text: `皇极拟推 · ${yearCn} 建${jie.branch}月（${lunarMonth}月）第${dayInJie}日`,

@@ -1,7 +1,6 @@
 /**
  * 太乙神数常数表。
- * 数据汇集自 MIT 协议开源项目 kentang2017/kintaiyi（config.py / taiyidict.py），
- * 并与 wlhyl/taiyipython 的推导式实现交叉核对。
+ * 数据汇集自 MIT 协议开源项目 kentang2017/kintaiyi（config.py / taiyidict.py）。
  */
 import { zipMap, rotate, JIAZI } from './utils';
 

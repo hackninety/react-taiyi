@@ -10,7 +10,7 @@ const RIM_LAYOUT: Array<Array<GongName | null>> = [
   ['艮', '丑', '子', '亥', '乾'],
 ];
 
-/** 内宫（行、列从 1 起）：宫数与阴阳气标注（依 taiyipython 式盘） */
+/** 内宫（行、列从 1 起）：宫数与阴阳气标注（依传统十六神式盘布局） */
 const INNER: Record<string, { gong: number; note?: string }> = {
   '1,1': { gong: 9, note: '絕陰' },
   '1,2': { gong: 2, note: '易氣' },

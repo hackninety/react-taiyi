@@ -213,7 +213,7 @@ describe.skipIf(!hasFixtures)('kintaiyi 黄金用例对照', () => {
       for (const [k, v] of Object.entries(doors)) doorsStr[k] = v;
       expect(doorsStr, '八门').toEqual(c.doors);
 
-      // 格局（比键集合；四郭杜为本项目自 taiyipython 增补，参考实现无此格）
+      // 格局（比键集合；四郭杜为本项目依古法增补，参考实现无此格）
       let gejuKeys = Object.keys(e.geJu(c.ji, c.acum)).filter((k) => k !== '四郭杜');
       if (gejuKeys.length === 0) gejuKeys = ['無格局'];
       expect(gejuKeys.sort(), '格局').toEqual(c.geju);

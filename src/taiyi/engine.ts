@@ -1,7 +1,6 @@
 /**
  * 太乙神数排盘引擎。
- * 算法主体移植自 kentang2017/kintaiyi（MIT，kintaiyi.py），
- * 与 wlhyl/taiyipython 的推导式实现交叉核对；
+ * 算法主体移植自 kentang2017/kintaiyi（MIT，kintaiyi.py）；
  * 为可与 kintaiyi 黄金用例逐字段对照，边界语义（截断、取余、空值跳过）保持一致。
  */
 import {
@@ -845,7 +844,7 @@ export class TaiyiEngine {
       results['四郭固'] = '客目臨太乙宮、客主二將相關，四郭固，宜固守';
     }
 
-    // 四郭杜（采自 wlhyl/taiyipython 的推导式规则，kintaiyi 未收录）：
+    // 四郭杜（本项目依《太乙统宗宝鉴》四郭之义增补，kintaiyi 未收录）：
     // 文昌临客将之宫，且主客将参交互同宫，四郭杜塞
     const wcGong = gongOf(wc);
     if ((wcGong === ad || wcGong === av) && (hv === ad || hd === av)) {

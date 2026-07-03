@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "太乙神数排盘 — 汇集 GitHub 开源太乙算法（kintaiyi/taiyipython 等）的 React + TypeScript 实现",
+  "description": "太乙神数排盘 — 基于开源权威实现 kentang2017/kintaiyi 的 React + TypeScript 前后端应用",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
