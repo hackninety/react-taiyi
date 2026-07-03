@@ -86,11 +86,14 @@ body {
 /* 视图页签 */
 .view-tabs {
   display: inline-flex;
+  flex-wrap: wrap;            /* 标签多时换行，避免溢出撑破页面导致未居中 */
+  justify-content: center;
   gap: 4px;
+  max-width: 100%;
   margin-top: 14px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 22px;
   padding: 4px;
 }
 
@@ -124,22 +127,16 @@ body {
   animation: fadeInUp 0.5s ease-out both;
 }
 
-@media (max-width: 860px) {
-  .guide { grid-template-columns: 1fr; }
-  .guide-toc { position: static !important; flex-direction: row !important; flex-wrap: wrap; }
-  .toc-item { flex: 0 0 auto; }
-}
-
 .guide-toc {
   position: sticky;
   top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   background: var(--ink);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 10px;
+  padding: 12px 10px;
   box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
 }
 
@@ -147,27 +144,67 @@ body {
   font-family: var(--font-display);
   color: var(--gold);
   letter-spacing: 0.3em;
-  font-size: 0.9rem;
-  padding: 4px 8px 8px;
+  text-indent: 0.3em;
+  font-size: 0.92rem;
+  text-align: center;
+  padding: 2px 4px 10px;
   border-bottom: 1px solid var(--line);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .toc-item {
   background: transparent;
   border: none;
+  border-left: 2px solid transparent;   /* 占位，激活时上色，避免宽度抖动 */
   color: var(--text-dim);
   text-align: left;
   font-family: inherit;
   font-size: 0.82rem;
-  padding: 6px 8px;
-  border-radius: 6px;
+  line-height: 1.5;
+  padding: 7px 10px;
+  border-radius: 0 6px 6px 0;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .toc-item:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
-.toc-item.active { color: var(--gold-light); background: rgba(212, 175, 55, 0.1); }
+
+.toc-item.active {
+  color: var(--gold-light);
+  background: rgba(212, 175, 55, 0.1);
+  border-left-color: var(--gold);
+}
+
+/* 移动端目录：横排居中胶囊（须置于基础规则之后才能覆盖——同优先级按源码顺序） */
+@media (max-width: 860px) {
+  .guide { grid-template-columns: 1fr; }
+  .guide-toc {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+  }
+  .guide-toc-head {
+    flex-basis: 100%;
+    border-bottom: none;
+    margin-bottom: 2px;
+    padding-bottom: 2px;
+  }
+  .toc-item {
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    border-left-width: 1px;
+    border-radius: 999px;
+    padding: 5px 12px;
+    white-space: nowrap;
+  }
+  .toc-item.active { border-color: rgba(212, 175, 55, 0.5); }
+}
 
 .guide-body {
   display: flex;
@@ -1044,6 +1081,18 @@ body {
 
 @media (max-width: 980px) {
   .api-input { flex-basis: 100%; }
+  .board-tabs { justify-content: center; }   /* 移动端盘面视图页签居中 */
+}
+
+/* 只读 API 地址：光标与观感区别于可编辑框 */
+.api-input[readonly] { cursor: default; opacity: 0.82; }
+
+/* 窄屏：视图页签收紧，避免占多行且保持居中 */
+@media (max-width: 560px) {
+  .app { padding-left: 12px; padding-right: 12px; }
+  .app-header h1 { font-size: 2rem; letter-spacing: 0.28em; text-indent: 0.28em; }
+  .view-tabs { gap: 3px; }
+  .view-tabs button { padding: 6px 12px; font-size: 0.8rem; letter-spacing: 0.04em; }
 }
 
 /* ── kintaiyi 全解釋（pan 直出分组卡） ── */

@@ -69,7 +69,7 @@ export function InputPanel({
 
   return (
     <section className="input-card">
-      <div className="input-card-head">输入起局时间 · 五计式 × 四积年流派 · 数据全在本地计算</div>
+      <div className="input-card-head">输入起局时间 · 五计式 × 四积年流派 · 后端优先 · 可切本地引擎离线</div>
       <div className="input-panel">
         {showHuangji ? (
           // 皇极全跨度模式：数字输入支持公元前（负数年，天文纪年 0 = 公元前 1 年）

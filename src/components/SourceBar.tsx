@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { DataSource, FieldDiff } from '../taiyi/remote';
 
 /** 远程数据源状态（App 维护） */
@@ -12,17 +11,14 @@ interface Props {
   dataSource: DataSource;
   onDataSourceChange: (v: DataSource) => void;
   apiBase: string;
-  onApiBaseChange: (v: string) => void;
   remote: RemoteState;
   /** 太乙范围外（皇极拟推口径仅本地引擎支持） */
   outOfRange: boolean;
 }
 
 export function SourceBar({
-  dataSource, onDataSourceChange, apiBase, onApiBaseChange, remote, outOfRange,
+  dataSource, onDataSourceChange, apiBase, remote, outOfRange,
 }: Props) {
-  const [draft, setDraft] = useState(apiBase);
-
   const realDiffs = remote.phase === 'ok' ? remote.diffs.filter((d) => !d.known) : [];
   const knownDiffs = remote.phase === 'ok' ? remote.diffs.filter((d) => d.known) : [];
 
@@ -36,7 +32,7 @@ export function SourceBar({
   } else if (remote.phase === 'ok') {
     chip = realDiffs.length
       ? { cls: 'warn', text: `⚠ 上游 kintaiyi 与本地引擎有 ${realDiffs.length} 处差异（上游或已更新，须复核）` }
-      : { cls: 'ok', text: `kintaiyi 后端 ✓ 与本地引擎逐字段一致 · 上游 ${remote.ref.slice(0, 7)}` };
+      : { cls: 'ok', text: `后端与本地引擎逐字段一致 · 上游 ${remote.ref.slice(0, 7)}` };
   } else if (remote.phase === 'fallback') {
     chip = { cls: 'err', text: `kintaiyi 后端不可用，已自动回退本地引擎（${remote.reason}）` };
   }
@@ -49,19 +45,18 @@ export function SourceBar({
           value={dataSource}
           onChange={(ev) => onDataSourceChange(ev.target.value as DataSource)}
         >
-          <option value="remote">kintaiyi 后端优先（默认）</option>
+          <option value="remote">后端优先</option>
           <option value="local">仅本地引擎</option>
         </select>
       </label>
       {dataSource === 'remote' && (
         <input
           className="api-input"
-          value={draft}
+          value={apiBase}
+          readOnly
           spellCheck={false}
           aria-label="API 地址"
-          onChange={(ev) => setDraft(ev.target.value)}
-          onBlur={() => { if (draft !== apiBase) onApiBaseChange(draft); }}
-          onKeyDown={(ev) => { if (ev.key === 'Enter') (ev.target as HTMLInputElement).blur(); }}
+          title={apiBase}
         />
       )}
       {chip && <span className={`src-chip ${chip.cls}`}>{chip.text}</span>}

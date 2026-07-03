@@ -8,7 +8,7 @@ import type { HuangjiInfo, MingfaResult, Sex, SolarTimeInfo, TaiyiInput, TaiyiRe
 import { findLongitude } from './lib/cities';
 import {
   fetchRemoteChart, compareRemote, panSvgUrl,
-  getApiBase, saveApiBase, getDataSource, saveDataSource,
+  getApiBase, getDataSource, saveDataSource,
 } from './taiyi/remote';
 import type { DataSource } from './taiyi/remote';
 import { fetchPan } from './taiyi/pan';
@@ -75,7 +75,8 @@ export default function App() {
   const [showHuangji, setShowHuangji] = useState(false);
   // kintaiyi 权威后端（后端优先，不可用自动回退本地并提示）
   const [dataSource, setDataSource] = useState<DataSource>(getDataSource);
-  const [apiBase, setApiBase] = useState<string>(getApiBase);
+  // API 地址只读展示（可经 VITE_TAIYI_API / localStorage 配置，界面不提供编辑）
+  const [apiBase] = useState<string>(getApiBase);
   const [remote, setRemote] = useState<RemoteState>({ phase: 'off' });
   const [pan, setPan] = useState<PanState>({ phase: 'idle' });
   const [boardView, setBoardView] = useState<'both' | 'square' | 'circle'>('both');
@@ -312,7 +313,6 @@ export default function App() {
             dataSource={dataSource}
             onDataSourceChange={(v) => { setDataSource(v); saveDataSource(v); }}
             apiBase={apiBase}
-            onApiBaseChange={(v) => setApiBase(saveApiBase(v))}
             remote={remote}
             outOfRange={!taiyiInRange}
           />
