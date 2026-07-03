@@ -1313,3 +1313,52 @@ body {
 }
 
 .upd-list strong { color: var(--gold-light); font-size: 0.85rem; }
+
+/* ── 流卦運多期时间轴 ── */
+.liu-wrap { margin-top: 20px; }
+.liu-wrap h3 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.liu-row { display: flex; align-items: stretch; gap: 10px; margin: 8px 0; }
+
+.liu-name {
+  flex: 0 0 3.2em;
+  display: flex;
+  align-items: center;
+  color: var(--gold-light);
+  font-size: 0.82rem;
+  font-family: var(--font-display);
+}
+
+.liu-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  min-width: 0;
+  flex: 1;
+}
+
+.liu-chip {
+  flex: 0 0 auto;
+  min-width: 74px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(13, 17, 28, 0.55);
+  padding: 6px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.liu-chip em { font-style: normal; font-size: 0.66rem; color: var(--text-dim); }
+.liu-chip b { font-size: 0.85rem; color: var(--text); font-weight: 600; white-space: nowrap; }
+.liu-chip span { font-size: 0.68rem; color: var(--text-dim); }
+
+.liu-chip.now {
+  border-color: rgba(212, 175, 55, 0.55);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+.liu-chip.now em::after { content: ' · 今'; color: var(--gold-light); }

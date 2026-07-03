@@ -44,6 +44,58 @@ export async function fetchPan(
   return res.json() as Promise<PanResp>;
 }
 
+/** 流卦運多期时间轴（后端 /api/taiyi/liu 直调上游 apps/hex_timeline 推法） */
+export interface LiuStep {
+  label: string;
+  sub: string;
+  時刻: number[];
+  卦: string;
+  卦符: string;
+  卦數: number;
+  爻: number;
+  爻名: string;
+}
+
+export type LiuData = Record<'流年' | '流月' | '流日' | '流時' | '流分', LiuStep[]>;
+
+export async function fetchLiu(
+  input: TaiyiInput,
+  base: string,
+  signal?: AbortSignal,
+): Promise<{ ref: string; liu: LiuData }> {
+  const res = await fetch(`${base}/api/taiyi/liu`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal,
+    body: JSON.stringify({
+      year: input.year, month: input.month, day: input.day,
+      hour: input.hour, minute: input.minute,
+    }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+/** 命法全盘（后端 /api/taiyi/life 直调上游 taiyi_life()，含卷二十扩展） */
+export async function fetchLife(
+  input: TaiyiInput,
+  sex: '男' | '女',
+  base: string,
+  signal?: AbortSignal,
+): Promise<{ ref: string; life: PanData }> {
+  const res = await fetch(`${base}/api/taiyi/life`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal,
+    body: JSON.stringify({
+      year: input.year, month: input.month, day: input.day,
+      hour: input.hour, minute: input.minute, sex,
+    }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 /** 上游文档（局數史例/災異統計/古籍書目/看盤要領/教程/更新日誌）*/
 export type DocName = 'example' | 'disaster' | 'guji' | 'instruction' | 'tutorial' | 'update';
 
@@ -79,7 +131,7 @@ export const PAN_GROUPS: PanGroup[] = [
       '推三門具不具', '推五將發不發', '推主客相闗法', '推多少以占勝負',
       '推太乙風雲飛鳥助戰法', '推孤單以占成敗', '推陰陽以占厄會', '明天子巡狩之期術',
       '推雷公入水', '推臨津問道', '推獅子反擲', '推白雲捲空', '推猛虎相拒',
-      '推白龍得雲', '推回軍無言',
+      '推白龍得雲', '推回軍無言', '推太乙當時法',
     ],
   },
   {
@@ -161,5 +213,5 @@ export const PAN_IGNORED: string[] = [
   '主算', '主將', '主參', '客算', '客將', '客參', '定算',
   '合神', '計神', '定目', '君基', '臣基', '民基',
   '五福', '帝符', '太尊', '飛鳥', '三風', '五風', '八風', '大游', '小游',
-  '八門分佈', '十六宮分佈', '八宮旺衰', '推太乙當時法',
+  '八門分佈', '十六宮分佈', '八宮旺衰',
 ];

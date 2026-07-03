@@ -18,7 +18,7 @@ function isScalar(v: unknown): v is string | number | boolean {
   return typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean';
 }
 
-function PanValue({ v, depth = 0 }: { v: unknown; depth?: number }) {
+export function PanValue({ v, depth = 0 }: { v: unknown; depth?: number }) {
   if (isEmpty(v)) return <span className="pan-empty">—</span>;
   if (isScalar(v)) {
     const s = String(v);

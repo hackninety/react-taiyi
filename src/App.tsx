@@ -15,6 +15,8 @@ import { fetchPan } from './taiyi/pan';
 import { PanCards } from './components/PanCards';
 import type { PanState } from './components/PanCards';
 import { TongyunExtra, GuiyunExtra, WuzhenExtra } from './components/PanExtras';
+import { LiuTimeline } from './components/LiuTimeline';
+import { LifeCards } from './components/LifeCards';
 import { DocsView } from './components/DocsPages';
 import { InputPanel } from './components/InputPanel';
 import type { SolarTimeSetting } from './components/InputPanel';
@@ -342,6 +344,18 @@ export default function App() {
               </div>
             </main>
             {taiyiInRange && (
+              <LiuTimeline
+                input={effectiveInput}
+                apiBase={apiBase}
+                enabled={remoteOk}
+                unavailableNote={
+                  dataSource === 'local'
+                    ? '「仅本地引擎」模式下不加载——切换数据源后显示。'
+                    : remote.phase === 'fallback' ? 'kintaiyi 后端不可用，流卦運暂无法推算。' : null
+                }
+              />
+            )}
+            {taiyiInRange && (
               <PanCards
                 state={pan}
                 extras={pan.phase === 'ok' ? {
@@ -367,6 +381,9 @@ export default function App() {
                       : null
                 }
               />
+            )}
+            {taiyiInRange && showMingfa && (
+              <LifeCards input={effectiveInput} sex={sex} apiBase={apiBase} enabled={remoteOk} />
             )}
             <ExportCard
               payload={{
