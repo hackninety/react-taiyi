@@ -26,6 +26,8 @@ export interface ExportPayload {
   huangjiOnlyInput?: { year: number; month: number; day: number; hour: number; minute: number } | null;
   /** kintaiyi 全解释盘（后端 pan() 直出，中文键与上游一致；后端不可用时为空） */
   kintaiyiPan?: Record<string, unknown> | null;
+  /** 局數史例命中（该排盘年份的史载纪事，year 为公元前直记；来自上游 docs/example.md） */
+  historyExamples?: Array<{ year: number; kook: string; event: string; source: string }> | null;
 }
 
 /** 四流派太乙积年常数（与 engine TN_DICT 一致，导出时注明以防混用） */
@@ -94,7 +96,9 @@ export function buildMeta({ result: r, mingfa, planets, solarTime, huangji, kint
         太乙积年流派: `${r.methodName}（积年常数 ${ACUM_CONST[r.input.acumYear].toLocaleString('en-US')}）`,
         历法口径: r.calendarMode === '皇极拟推'
           ? '皇极拟推——四柱按纯干支算术＋天文节气推得（拟推格里历），农历为节气月建拟推，属现代拟推、非古历考据，不在黄金用例验证范围内'
-          : '标准——lunar-typescript 历法，公元 600–9999 经黄金用例对照验证',
+          : r.calendarMode === '上游古歷'
+            ? '上游古歷——kintaiyi/sxtwl 中国古历表经后端直出（与上游 demo 公元前排盘同款同源），年计局数经 67 条局數史例对照验证'
+            : '标准——lunar-typescript 历法，公元 600–9999 经黄金用例对照验证',
         真太阳时: solarText(solarTime),
       }
       : {
@@ -115,7 +119,7 @@ export function buildMeta({ result: r, mingfa, planets, solarTime, huangji, kint
 }
 
 /** 断事要点预归集：给 AI 的推理抓手 */
-export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, huangjiOnlyInput }: ExportPayload) {
+export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, huangjiOnlyInput, historyExamples }: ExportPayload) {
   const ctx: Record<string, unknown> = {};
 
   if (!r) {
@@ -158,6 +162,12 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
   ctx.值卦与周期 =
     `值年卦 ${r.yearGua}、值日卦 ${r.dayGua}、值时卦 ${r.hourGua}；阳九在${r.yangjiu}、百六在${r.bailiu}。`;
 
+  if (historyExamples?.length) {
+    ctx.史例參照 = historyExamples
+      .map((m) => `${m.year < 0 ? `公元前 ${-m.year} 年` : `公元 ${m.year} 年`}（史載局數 ${m.kook}，出處 ${m.source}）`)
+      .join('；') + '——该年份见于古籍史例，纪事全文在 historyExamples 字段，断局时可与盘面互证。';
+  }
+
   if (mingfa) {
     ctx.命法要 =
       `${mingfa.sex}命；命法积数 ${mingfa.lifeAccum}，三才数（天/地/人）${mingfa.threeCai.join('/')}；` +
@@ -174,7 +184,7 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
 }
 
 export function toJSONText(payload: ExportPayload): string {
-  const { result, mingfa, planets, solarTime, huangji, huangjiOnlyInput, kintaiyiPan } = payload;
+  const { result, mingfa, planets, solarTime, huangji, huangjiOnlyInput, kintaiyiPan, historyExamples } = payload;
   return JSON.stringify(
     {
       app: 'react-taiyi',
@@ -189,6 +199,8 @@ export function toJSONText(payload: ExportPayload): string {
       ...(huangji ? { huangji } : {}),
       // kintaiyi 全解释盘（《太乙統宗寶鑑》诸卷释文/統運/卦象/军事/博弈），繁体中文键为上游原样
       ...(kintaiyiPan ? { kintaiyiPan } : {}),
+      // 局數史例命中（该年份的史载纪事，year 为公元前直记；可与盘面互证）
+      ...(historyExamples?.length ? { historyExamples } : {}),
     },
     null,
     2,
@@ -255,7 +267,7 @@ function toHuangjiOnlyMarkdown(payload: ExportPayload): string {
 }
 
 export function toMarkdown(payload: ExportPayload): string {
-  const { result: r, mingfa, planets, solarTime, huangji } = payload;
+  const { result: r, mingfa, planets, solarTime, huangji, historyExamples } = payload;
   if (!r) return toHuangjiOnlyMarkdown(payload);
   const L: string[] = [];
   const { input } = r;
@@ -365,6 +377,19 @@ export function toMarkdown(payload: ExportPayload): string {
   L.push(`- 太岁禽星：${r.yearChin} · 廿八宿起 ${r.startXiu}`);
   L.push(`- 值年卦 ${r.yearGua} · 值日卦 ${r.dayGua} · 值时卦 ${r.hourGua}`);
   L.push('');
+
+  if (historyExamples?.length) {
+    L.push('## 局數史例對照');
+    L.push('');
+    L.push('该排盘年份见于上游古籍史例库（docs/example.md），可与盘面互证：');
+    L.push('');
+    for (const m of historyExamples) {
+      const yearCn = m.year < 0 ? `公元前 ${-m.year} 年` : `公元 ${m.year} 年`;
+      L.push(`- **${yearCn}** · 史載局數 ${m.kook} · 出處《${m.source}》`);
+      L.push(`  ${m.event}`);
+    }
+    L.push('');
+  }
 
   if (planets) {
     L.push('## 十精（七曜落位）');

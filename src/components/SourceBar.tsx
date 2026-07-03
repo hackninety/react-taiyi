@@ -12,21 +12,21 @@ interface Props {
   onDataSourceChange: (v: DataSource) => void;
   apiBase: string;
   remote: RemoteState;
-  /** 太乙范围外（皇极拟推口径仅本地引擎支持） */
-  outOfRange: boolean;
+  /** 覆盖徽标（600 外的古歷/拟推口径状态由 App 决定） */
+  chipOverride?: { cls: string; text: string } | null;
 }
 
 export function SourceBar({
-  dataSource, onDataSourceChange, apiBase, remote, outOfRange,
+  dataSource, onDataSourceChange, apiBase, remote, chipOverride,
 }: Props) {
   const realDiffs = remote.phase === 'ok' ? remote.diffs.filter((d) => !d.known) : [];
   const knownDiffs = remote.phase === 'ok' ? remote.diffs.filter((d) => d.known) : [];
 
   let chip: { cls: string; text: string } | null = null;
-  if (dataSource === 'local') {
+  if (chipOverride) {
+    chip = chipOverride;
+  } else if (dataSource === 'local') {
     chip = { cls: 'off', text: '仅本地 TS 引擎（已对照 kintaiyi 黄金用例逐字段验证）' };
-  } else if (outOfRange) {
-    chip = { cls: 'off', text: '范围外「皇极历法拟推口径」仅本地引擎支持，后端对照不适用' };
   } else if (remote.phase === 'checking') {
     chip = { cls: 'checking', text: 'kintaiyi 后端校验中…' };
   } else if (remote.phase === 'ok') {

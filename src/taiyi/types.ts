@@ -45,8 +45,9 @@ export interface TaiyiResult {
   input: TaiyiInput;
   jiName: string;          // 年计/月计/日计/时计/分计
   methodName: string;      // 太乙统宗/太乙金镜/太乙淘金歌/太乙局
-  /** 历法口径：标准（lunar-typescript，600–9999 黄金验证）或 皇极拟推（全跨度） */
-  calendarMode: '标准' | '皇极拟推';
+  /** 历法口径：标准（lunar-typescript，600–9999 黄金验证）/ 皇极拟推（勾选皇极，全跨度）
+   * / 上游古歷（未勾选皇极的 600 前年份，kintaiyi/sxtwl 中国古历表经后端直出） */
+  calendarMode: '标准' | '皇极拟推' | '上游古歷';
   /** [年柱, 月柱, 日柱, 时柱, 分柱] */
   ganzhi: string[];
   lunar: { year: number; month: number; day: number; text: string };

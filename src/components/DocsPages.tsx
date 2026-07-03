@@ -4,6 +4,7 @@ import type { DocName } from '../taiyi/pan';
 import {
   firstTable, numberedSections, splitByHeading, stripHtml, splitLinks, paragraphs,
 } from '../lib/mdlite';
+import { parseExamples } from '../lib/examples';
 
 /**
  * kintaiyi 上游 docs/*.md 五个独立页：
@@ -58,13 +59,10 @@ export function HistoryExamplesPage({ apiBase, onPickYear }: {
 }) {
   const state = useDoc('example', apiBase);
   const [sel, setSel] = useState(0);
-  const rows = useMemo(() => {
-    if (state.phase !== 'ok') return [];
-    const t = firstTable(state.md);
-    return (t?.rows ?? [])
-      .map((r) => ({ year: Number(r[0]), kook: r[1], event: r[2], source: r[3] }))
-      .filter((r) => Number.isFinite(r.year));
-  }, [state]);
+  const rows = useMemo(
+    () => (state.phase === 'ok' ? parseExamples(state.md) : []),
+    [state],
+  );
   const cur = rows[sel];
   return (
     <DocShell title="局數史例" tag="docs/example.md" state={state}>

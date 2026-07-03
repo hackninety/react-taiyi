@@ -6,6 +6,10 @@ import { zipMap, rotate, JIAZI } from './utils';
 
 export const DI_ZHI = [...'子丑寅卯辰巳午未申酉戌亥'];
 
+/** 上游 kintaiyi/sxtwl 古历实测支持下限：公元前 6000 年（天文纪年 -5999）。
+ * 未勾选皇极时，600 前的盘面经后端以 sxtwl 古历直出（与上游 demo 同款）。 */
+export const GULI_MIN_YEAR = -5999;
+
 /** 十六神盘辰序（顺时针） */
 export const SIXTEEN = [...'子丑艮寅卯辰巽巳午未坤申酉戌乾亥'];
 

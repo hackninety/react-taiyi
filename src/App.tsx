@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   calculateTaiyi, calculateMingfa, calculateHuangji, loadStarsData, findStars, starsLoaded,
   applyTrueSolarTime, browserTzOffsetMinutes, tzAutoLocation,
-  formatGregorianYearCn, TAIYI_MIN_YEAR, TAIYI_MAX_YEAR,
+  formatGregorianYearCn, TAIYI_MIN_YEAR, TAIYI_MAX_YEAR, buildRemoteResult,
 } from './taiyi';
+import { loadExamples, matchExamples } from './lib/examples';
+import type { ExampleRow } from './lib/examples';
 import type { HuangjiInfo, MingfaResult, Sex, SolarTimeInfo, TaiyiInput, TaiyiResult } from './taiyi';
 import { findLongitude } from './lib/cities';
 import {
@@ -79,6 +81,14 @@ export default function App() {
   const [apiBase] = useState<string>(getApiBase);
   const [remote, setRemote] = useState<RemoteState>({ phase: 'off' });
   const [pan, setPan] = useState<PanState>({ phase: 'idle' });
+  // 上游古歷盘（600 前、未勾选皇极时后端直出整张盘）
+  const [guli, setGuli] = useState<
+    | { phase: 'idle' } | { phase: 'loading' }
+    | { phase: 'ok'; result: TaiyiResult; ref: string }
+    | { phase: 'err'; reason: string }
+  >({ phase: 'idle' });
+  // 局數史例命中（该年份的史载纪事，展示并入 AI 导出）
+  const [historyMatches, setHistoryMatches] = useState<ExampleRow[]>([]);
   const [boardView, setBoardView] = useState<'both' | 'square' | 'circle'>('both');
   const [solar, setSolar] = useState<SolarTimeSetting>({
     enabled: false,
@@ -141,9 +151,17 @@ export default function App() {
     };
   }, [input, solar, taiyiInRange]);
 
-  // 标准范围内用黄金验证历法；范围外且开皇极时，以皇极拟推历法排整盘
-  const { result, error } = useMemo<{ result: TaiyiResult | null; error: string | null }>(() => {
-    if (!taiyiInRange && !showHuangji) return { result: null, error: null };
+  // 上游古歷模式：未勾选皇极的 600 前年份，盘面由后端 kintaiyi/sxtwl 古历直出（demo 同款）；
+  // 勾选皇极则盘面用皇极拟推口径（本地引擎）
+  const guliMode = !taiyiInRange && !showHuangji;
+  // 后端年份约定为「公元前直记」（无 0 年）；600–9999 时恒等
+  const remoteInput = useMemo<TaiyiInput>(
+    () => ({ ...effectiveInput, year: effectiveInput.year <= 0 ? effectiveInput.year - 1 : effectiveInput.year }),
+    [effectiveInput],
+  );
+
+  // 本地盘：标准范围用黄金验证历法，范围外用皇极拟推（古历模式下作为回退与即时渲染）
+  const { result: localResult, error } = useMemo<{ result: TaiyiResult | null; error: string | null }>(() => {
     try {
       return {
         result: calculateTaiyi(effectiveInput, taiyiInRange ? 'standard' : 'huangji'),
@@ -152,38 +170,37 @@ export default function App() {
     } catch (e) {
       return { result: null, error: e instanceof Error ? e.message : String(e) };
     }
-  }, [effectiveInput, taiyiInRange, showHuangji]);
+  }, [effectiveInput, taiyiInRange]);
 
   // 命法依赖标准历法（节气积日/流年虚岁），仅在标准范围内提供
   const mingfa = useMemo<MingfaResult | null>(() => {
-    if (!showMingfa || !result || !taiyiInRange) return null;
+    if (!showMingfa || !localResult || !taiyiInRange) return null;
     try {
       return calculateMingfa(effectiveInput, sex);
     } catch {
       return null;
     }
-  }, [effectiveInput, sex, showMingfa, result, taiyiInRange]);
+  }, [effectiveInput, sex, showMingfa, localResult, taiyiInRange]);
 
   const planets = useMemo(() => {
     if (!showTenjing || !tenjingReady) return null;
     return findStars(effectiveInput.year, effectiveInput.month, effectiveInput.day);
   }, [showTenjing, tenjingReady, effectiveInput.year, effectiveInput.month, effectiveInput.day]);
 
-  // 皇极经世历：范围内以太乙四柱起月日时卦；范围外（全跨度）以公历日期起
+  // 皇极经世历：恒显示（与盘面历法无关；勾选「皇极」仅决定范围外盘面是否用拟推口径）。
+  // 月/日/时卦按公历日期（冬至换岁）逐层推演，与太乙盘四柱脱钩
   const { huangji, huangjiError } = useMemo<{ huangji: HuangjiInfo | null; huangjiError: string | null }>(() => {
-    if (!showHuangji) return { huangji: null, huangjiError: null };
     try {
-      // 皇极月/日/时卦一律按公历日期（冬至换岁）逐层推演，与太乙盘四柱脱钩
       const source = { month: effectiveInput.month, day: effectiveInput.day, hour: effectiveInput.hour };
       return { huangji: calculateHuangji(effectiveInput.year, source), huangjiError: null };
     } catch (e) {
       return { huangji: null, huangjiError: e instanceof Error ? e.message : String(e) };
     }
-  }, [showHuangji, effectiveInput]);
+  }, [effectiveInput]);
 
-  // 后端优先：请求 kintaiyi 权威后端并与本地引擎逐字段对照；失败自动回退本地
+  // 后端优先（600–9999）：请求 kintaiyi 权威后端并与本地引擎逐字段对照；失败自动回退本地
   useEffect(() => {
-    if (dataSource !== 'remote' || !result || !taiyiInRange) {
+    if (dataSource !== 'remote' || !localResult || !taiyiInRange) {
       setRemote({ phase: 'off' });
       return;
     }
@@ -191,10 +208,10 @@ export default function App() {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);
     setRemote({ phase: 'checking' });
-    fetchRemoteChart(effectiveInput, apiBase, ctrl.signal)
+    fetchRemoteChart(remoteInput, apiBase, ctrl.signal)
       .then((resp) => {
         if (!active) return;
-        setRemote({ phase: 'ok', ref: resp.ref, diffs: compareRemote(result, resp.chart) });
+        setRemote({ phase: 'ok', ref: resp.ref, diffs: compareRemote(localResult, resp.chart) });
       })
       .catch((e: unknown) => {
         if (!active) return;
@@ -203,10 +220,42 @@ export default function App() {
       })
       .finally(() => clearTimeout(timer));
     return () => { active = false; clearTimeout(timer); ctrl.abort(); };
-  }, [dataSource, apiBase, effectiveInput, result, taiyiInRange]);
+  }, [dataSource, apiBase, remoteInput, localResult, taiyiInRange]);
 
-  // 全解释盘（kintaiyi pan()，含博弈）：仅后端可用时请求；pan 较重，独立于对照请求
+  // 上游古歷盘（600 前、未勾选皇极）：chart + pan 双请求，装配整张 TaiyiResult
   useEffect(() => {
+    if (!guliMode || dataSource !== 'remote') {
+      setGuli({ phase: 'idle' });
+      return;
+    }
+    let active = true;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000);
+    setGuli({ phase: 'loading' });
+    setPan({ phase: 'loading' });
+    Promise.all([
+      fetchRemoteChart(remoteInput, apiBase, ctrl.signal),
+      fetchPan(remoteInput, apiBase, true, ctrl.signal),
+    ])
+      .then(([c, p]) => {
+        if (!active) return;
+        setGuli({ phase: 'ok', result: buildRemoteResult(effectiveInput, c.chart, p.pan), ref: c.ref });
+        setPan({ phase: 'ok', data: p.pan, ref: p.ref });
+      })
+      .catch((e: unknown) => {
+        if (!active) return;
+        const reason = ctrl.signal.aborted ? '请求超时' : e instanceof Error ? e.message : String(e);
+        setGuli({ phase: 'err', reason });
+        setPan({ phase: 'err', reason });
+      })
+      .finally(() => clearTimeout(timer));
+    return () => { active = false; clearTimeout(timer); ctrl.abort(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guliMode, dataSource, remoteInput, apiBase]);
+
+  // 全解释盘（kintaiyi pan()，含博弈）：600–9999 由对照成功触发；古歷模式在上方一并请求
+  useEffect(() => {
+    if (guliMode) return; // 古歷模式的 pan 由古歷 effect 管理
     if (remote.phase !== 'ok') {
       setPan({ phase: 'idle' });
       return;
@@ -215,7 +264,7 @@ export default function App() {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 30000); // 首次未缓存需数秒
     setPan({ phase: 'loading' });
-    fetchPan(effectiveInput, apiBase, true, ctrl.signal)
+    fetchPan(remoteInput, apiBase, true, ctrl.signal)
       .then((resp) => { if (active) setPan({ phase: 'ok', data: resp.pan, ref: resp.ref }); })
       .catch((e: unknown) => {
         if (!active) return;
@@ -225,15 +274,29 @@ export default function App() {
       .finally(() => clearTimeout(timer));
     return () => { active = false; clearTimeout(timer); ctrl.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remote.phase === 'ok', effectiveInput, apiBase]);
+  }, [remote.phase === 'ok', guliMode, remoteInput, apiBase]);
 
-  const remoteOk = remote.phase === 'ok';
-  const circularUrl = remoteOk ? panSvgUrl(effectiveInput, apiBase, Boolean(planets)) : null;
+  // 展示盘：古歷模式后端装配成功用上游古歷盘，否则本地（标准/拟推回退）
+  const result = guliMode && guli.phase === 'ok' && guli.result ? guli.result : localResult;
+
+  // 史例對照：排盘年份命中局數史例即展示并入 AI 导出（数据源为后端 docs）
+  useEffect(() => {
+    if (!result || dataSource !== 'remote') { setHistoryMatches([]); return; }
+    let active = true;
+    loadExamples(apiBase)
+      .then((rows) => { if (active) setHistoryMatches(matchExamples(rows, effectiveInput.year)); })
+      .catch(() => { if (active) setHistoryMatches([]); });
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Boolean(result), dataSource, apiBase, effectiveInput.year]);
+
+  const remoteOk = taiyiInRange ? remote.phase === 'ok' : guli.phase === 'ok';
+  const circularUrl = remoteOk ? panSvgUrl(remoteInput, apiBase, Boolean(planets)) : null;
   const circularNote = dataSource === 'local'
     ? '当前为「仅本地引擎」模式，切换数据源后显示'
-    : remote.phase === 'fallback' ? '后端不可用，暂无法渲染（方盘不受影响）'
-    : remote.phase === 'checking' ? '后端连接中…'
-    : !taiyiInRange ? '范围外拟推口径暂不支持' : undefined;
+    : (taiyiInRange ? remote.phase === 'fallback' : guli.phase === 'err') ? '后端不可用，暂无法渲染（方盘不受影响）'
+    : (taiyiInRange ? remote.phase === 'checking' : guli.phase === 'loading') ? '后端连接中…'
+    : !taiyiInRange && showHuangji ? '皇极拟推口径盘面由本地引擎渲染，圆盘需后端（取消勾选「皇极」即用上游古历出圆盘）' : undefined;
 
   const solarHint = solarInfo.applied
     ? `${solarInfo.place}（${formatUtcOffset(solarInfo.tzOffsetMinutes!)}）${solarInfo.offsetMinutes! >= 0 ? '+' : ''}${solarInfo.offsetMinutes} 分钟 → ${String(solarInfo.adjusted!.hour).padStart(2, '0')}:${String(solarInfo.adjusted!.minute).padStart(2, '0')} 起局`
@@ -268,9 +331,8 @@ export default function App() {
             view={view}
             apiBase={apiBase}
             onPickYear={(y) => {
+              // 600 前年份默认即走上游 sxtwl 古历盘面（demo 同款），无需勾选皇极
               setInput({ ...input, year: y });
-              // 史例多在太乙历法范围外（公元前），自动开启皇极全跨度以便直接出盘
-              if (y < TAIYI_MIN_YEAR || y > TAIYI_MAX_YEAR) setShowHuangji(true);
               setView('pan');
               window.scrollTo(0, 0);
             }}
@@ -301,20 +363,32 @@ export default function App() {
 
         {!taiyiInRange && (
           <div className="info-banner">
-            当前年份 {formatGregorianYearCn(input.year)} 超出太乙历法验证范围（公元 {TAIYI_MIN_YEAR}–{TAIYI_MAX_YEAR}）。
+            当前年份 {formatGregorianYearCn(input.year)} 超出本地标准历法范围（公元 {TAIYI_MIN_YEAR}–{TAIYI_MAX_YEAR}）。
             {showHuangji
-              ? '太乙盘已切换为「皇极历法拟推口径」：四柱按纯干支算术＋天文节气推得（拟推格里历），农历为节气月建拟推，属现代拟推、非古历考据；元会运世照常推算。'
-              : '请勾选「皇极」以按皇极历法拟推口径出盘（一元全跨度：公元前 67016 — 公元 62583），或将年份改回范围内。'}
+              ? '盘面采用「皇极历法拟推口径」（本地引擎）：四柱按纯干支算术＋天文节气推得（拟推格里历），农历为节气月建拟推，属现代拟推、非古历考据；取消勾选「皇极」即改用上游 sxtwl 古历盘面。'
+              : '盘面采用上游 kintaiyi/sxtwl 中国古历表（后端直出，与上游 demo 公元前排盘同款）；勾选「皇极」可改用皇极历法拟推口径并解锁一元全跨度（公元前 67016 — 公元 62583）。'}
           </div>
         )}
 
-        {result && taiyiInRange && (
+        {result && (
           <SourceBar
             dataSource={dataSource}
             onDataSourceChange={(v) => { setDataSource(v); saveDataSource(v); }}
             apiBase={apiBase}
             remote={remote}
-            outOfRange={!taiyiInRange}
+            chipOverride={!taiyiInRange ? (
+              showHuangji
+                ? { cls: 'off', text: '皇极拟推口径盘面（本地引擎）——范围外后端对照不适用' }
+                : dataSource === 'local'
+                  ? { cls: 'off', text: '仅本地模式：600 前盘面走皇极拟推口径（切「后端优先」即用上游古历）' }
+                  : guli.phase === 'ok'
+                    ? { cls: 'ok', text: `上游古歷（sxtwl）盘面 · kintaiyi 直出 · 上游 ${guli.ref.slice(0, 7)}` }
+                    : guli.phase === 'loading'
+                      ? { cls: 'checking', text: '上游古歷盘面加载中…（暂以皇极拟推口径显示）' }
+                      : guli.phase === 'err'
+                        ? { cls: 'err', text: `后端不可用（${guli.reason}），已回退皇极拟推口径盘面` }
+                        : null
+            ) : null}
           />
         )}
 
@@ -343,19 +417,22 @@ export default function App() {
                 <ResultPanel result={result} solarInfo={solarInfo} />
               </div>
             </main>
-            {taiyiInRange && (
+            {(taiyiInRange || guliMode) && (
               <LiuTimeline
-                input={effectiveInput}
+                input={remoteInput}
                 apiBase={apiBase}
-                enabled={remoteOk}
+                enabled={remoteOk && remoteInput.year >= 1}
                 unavailableNote={
-                  dataSource === 'local'
-                    ? '「仅本地引擎」模式下不加载——切换数据源后显示。'
-                    : remote.phase === 'fallback' ? 'kintaiyi 后端不可用，流卦運暂无法推算。' : null
+                  remoteInput.year < 1
+                    ? '公元前不支持流卦運多期时步（上游 hex_timeline 依 Python datetime，年份下限公元 1 年）。'
+                    : dataSource === 'local'
+                      ? '「仅本地引擎」模式下不加载——切换数据源后显示。'
+                      : (taiyiInRange ? remote.phase === 'fallback' : guli.phase === 'err')
+                        ? 'kintaiyi 后端不可用，流卦運暂无法推算。' : null
                 }
               />
             )}
-            {taiyiInRange && (
+            {(taiyiInRange || guliMode) && (
               <PanCards
                 state={pan}
                 extras={pan.phase === 'ok' ? {
@@ -376,7 +453,7 @@ export default function App() {
                 unavailableNote={
                   dataSource === 'local'
                     ? '「仅本地引擎」模式下不加载——全解釋由 kintaiyi 后端直出，切换数据源后显示。'
-                    : remote.phase === 'fallback'
+                    : (taiyiInRange ? remote.phase === 'fallback' : guli.phase === 'err')
                       ? 'kintaiyi 后端不可用，全解釋暂无法加载（盘面与导出不受影响）。'
                       : null
                 }
@@ -385,10 +462,29 @@ export default function App() {
             {taiyiInRange && showMingfa && (
               <LifeCards input={effectiveInput} sex={sex} apiBase={apiBase} enabled={remoteOk} />
             )}
+            {historyMatches.length > 0 && (
+              <section className="card hx-match">
+                <h3>
+                  局數史例對照
+                  <span className="pan-tag">该年份见于上游史例库 · 已并入 AI 导出可与盘面互证</span>
+                </h3>
+                {historyMatches.map((m, i) => (
+                  <div key={`${m.year}-${i}`} className="hx-example">
+                    <div className="hx-example-head">
+                      <strong>{m.year < 0 ? `公元前 ${-m.year} 年` : `公元 ${m.year} 年`}</strong>
+                      <span>史載局數：{m.kook}</span>
+                      <span>出處：{m.source}</span>
+                    </div>
+                    <p className="pan-text">{m.event}</p>
+                  </div>
+                ))}
+              </section>
+            )}
             <ExportCard
               payload={{
                 result, mingfa, planets, solarTime: solarInfo, huangji,
                 kintaiyiPan: pan.phase === 'ok' ? pan.data : null,
+                historyExamples: historyMatches.length ? historyMatches : null,
               }}
             />
           </>
