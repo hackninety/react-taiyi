@@ -22,6 +22,16 @@ describe('yhys-core 上游数据守卫', () => {
     const symbols = new Set(Array.from({ length: 64 }, (_, b) => getHexagram64(b).unicode));
     expect(symbols.size).toBe(64);
   });
+
+  it('繁体卦名字段 nameTrad（上游 eaf278f 新增）抽查与唯一性', () => {
+    expect(getHexagram64(1).nameTrad).toBe('復');
+    expect(getHexagram64(11).nameTrad).toBe('歸妹');
+    expect(getHexagram64(57).nameTrad).toBe('無妄');
+    expect(getHexagram64(60).nameTrad).toBe('遯');
+    expect(getHexagram64(30).nameTrad).toBe('大過');
+    const names = new Set(Array.from({ length: 64 }, (_, b) => getHexagram64(b).nameTrad));
+    expect(names.size).toBe(64);
+  });
 });
 
 describe('皇极经世历', () => {

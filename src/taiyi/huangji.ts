@@ -1,11 +1,10 @@
 /**
  * 皇极经世历（邵雍《皇极经世书》元会运世体系）。
  *
- * 算法与卦象数据**直接引用**开源库 yhys-core（github:hackninety/react-yhys）——
- * 上游更新后本项目随之更新，不再本地内联（卦符笔误已于上游 6f8be11 修复，
- * 本地对照表已删除）。本文件只做两件事：① 用库函数按元会运世逐层取卦；
- * ② 显示层将库的简体卦名转为繁体（经 GUA_64 以卦符反查），与太乙值卦命名统一；
- *   反查不中时回退库名，保证上游新增数据也能直通显示。
+ * 算法与卦象数据**完全直接引用**开源库 yhys-core（github:hackninety/react-yhys）——
+ * 上游更新后本项目随之更新，无任何本地卦表：卦符笔误已于上游 6f8be11 修复，
+ * 繁体卦名自上游 eaf278f 起由库的 nameTrad 字段提供（与太乙值卦繁体命名一致），
+ * 本地 unicode 对照表与简→繁显示转换均已删除。
  *
  * 流派校验状态（依 yhys-core 说明）：
  * - 黄畿：已对照《皇极经世书》黄畿注原文校验（84 个文献锚点），为默认。
@@ -24,7 +23,6 @@ import {
   huangjiAlgorithm,
   zhubiAlgorithm,
 } from 'yhys-core';
-import { GUA_64 } from './constants';
 import { JIAZI, ZHI, mod } from './utils';
 
 export type HuangjiSchool = '黄畿' | '祝泌';
@@ -43,22 +41,12 @@ export const HUANGJI_SCHOOL_NOTE: Record<HuangjiSchool, string> = {
 
 export const HUANGJI_DEFAULT_SCHOOL: HuangjiSchool = '黄畿';
 
-/** 卦符 -> 繁体卦名（由本项目 GUA_64「名+符」反查，与太乙值卦命名保持一致） */
-const UNICODE_TO_TRAD_NAME: Map<string, string> = (() => {
-  const m = new Map<string, string>();
-  for (const entry of GUA_64) m.set(entry.slice(-1), entry.slice(0, -1));
-  return m;
-})();
-
-/**
- * 库卦 -> 本项目卦：binary 与卦符直接取自 yhys-core（getHexagram64），
- * 仅显示层将简体卦名转繁体；反查不中时回退库名。
- */
+/** 库卦 -> 本项目卦：binary/卦符/繁体名（nameTrad）全部直接取自 yhys-core */
 function toHex(input: number | { binary: number }): Hexagram {
   const h = getHexagram64(typeof input === 'number' ? input : input.binary);
   return {
     binary: h.binary,
-    name: UNICODE_TO_TRAD_NAME.get(h.unicode) ?? h.name,
+    name: h.nameTrad ?? h.name,
     symbol: h.unicode,
   };
 }
