@@ -18,14 +18,26 @@ import {
   getShiHexagramByYear,
   getTenYearHexagram,
   getYueHexagram,
+  getYueHexagramByDate,
   getRiHexagram,
+  getRiHexagramByDate,
   getShiChenHexagram,
+  makeLocalDate,
   huangjiAlgorithm,
   zhubiAlgorithm,
 } from 'yhys-core';
 import { JIAZI, ZHI, mod } from './utils';
 
 export type HuangjiSchool = '黄畿' | '祝泌';
+
+/** 皇极一元跨度对应的公历年范围（sui 1..129600 ↔ 公元前 67016 — 公元 62583） */
+export const HUANGJI_MIN_YEAR = 1 - SUI_TO_GREGORIAN_OFFSET;   // -67016
+export const HUANGJI_MAX_YEAR = 129600 - SUI_TO_GREGORIAN_OFFSET; // 62583
+
+/** 公历年号的中文表述（天文纪年 0 = 公元前 1 年） */
+export function formatGregorianYearCn(year: number): string {
+  return year <= 0 ? `公元前 ${1 - year} 年` : `公元 ${year} 年`;
+}
 
 export interface Hexagram {
   binary: number;
@@ -83,21 +95,32 @@ export interface HuangjiInfo {
   decade: { hexagram: Hexagram; yaoName: string };  // 十年卦（黄畿注口径）
   sui: Hexagram;          // 岁卦（按所选流派）
   suiOther: { school: HuangjiSchool; hexagram: Hexagram };  // 另一派岁卦（对照）
-  month: Hexagram;        // 月卦（按月柱干支）
-  day: Hexagram;          // 日卦（按日柱干支）
+  month: Hexagram;        // 月卦
+  day: Hexagram;          // 日卦
   hour: Hexagram;         // 时卦（十二消息卦按时支）
+  /** 月/日/时卦的取数来源：太乙四柱（600–9999 内）或公历日期（全跨度，拟推格里历） */
+  monthDayHourSource: '四柱' | '公历日期';
 }
 
+/** 月/日/时卦取数来源：太乙盘四柱（范围内首选）或公历日期（皇极全跨度） */
+export type HuangjiPillarSource =
+  | { monthGz: string; dayGz: string; hourBranch: string }
+  | { month: number; day: number; hour: number };
+
 /**
- * 皇极经世历定位。
- * @param year 公历年（岁卦与 yhys 同口径，按公历年份取值）
- * @param pillars 本盘四柱（月柱/日柱/时支），用于月卦/日卦/时卦
+ * 皇极经世历定位。支持一元全跨度（公元前 67016 — 公元 62583）。
+ * @param year 公历年（天文纪年，0 = 公元前 1 年；岁卦与 yhys 同口径按年份取值）
+ * @param source 月/日/时卦取数来源：太乙四柱，或公历月日时（范围外由 yhys
+ *   天文节气按拟推格里历推月建，日卦按纪日干支连续推算）
  */
 export function calculateHuangji(
   year: number,
   school: HuangjiSchool,
-  pillars: { monthGz: string; dayGz: string; hourBranch: string },
+  source: HuangjiPillarSource,
 ): HuangjiInfo {
+  if (year < HUANGJI_MIN_YEAR || year > HUANGJI_MAX_YEAR) {
+    throw new Error(`超出皇极一元跨度（公元前 67016 — 公元 62583），得到 ${year}`);
+  }
   const hj = year + SUI_TO_GREGORIAN_OFFSET;
   const huiIndex = Math.floor((hj - 1) / 10800) % 12;
   const globalYun = Math.floor((hj - 1) / 360) + 1;
@@ -109,6 +132,24 @@ export function calculateHuangji(
   const suiHuangji = huangjiAlgorithm.getSuiHexagram(year);
   const suiZhubi = zhubiAlgorithm.getSuiHexagram(year);
   const useHuangji = school === '黄畿';
+
+  // 月/日/时卦：四柱来源（与太乙盘同口径）或公历日期来源（全跨度）
+  let month: Hexagram;
+  let day: Hexagram;
+  let hour: Hexagram;
+  let monthDayHourSource: HuangjiInfo['monthDayHourSource'];
+  if ('monthGz' in source) {
+    month = toHex(getYueHexagram(ganzhiIndex(source.monthGz)));
+    day = toHex(getRiHexagram(ganzhiIndex(source.dayGz)));
+    hour = toHex(getShiChenHexagram(mod(ZHI.indexOf(source.hourBranch), 12)));
+    monthDayHourSource = '四柱';
+  } else {
+    const d = makeLocalDate(year, source.month - 1, source.day);
+    month = toHex(getYueHexagramByDate(d));
+    day = toHex(getRiHexagramByDate(d));
+    hour = toHex(getShiChenHexagram(Math.floor(((source.hour + 1) % 24) / 2)));
+    monthDayHourSource = '公历日期';
+  }
 
   return {
     school,
@@ -137,8 +178,9 @@ export function calculateHuangji(
     suiOther: useHuangji
       ? { school: '祝泌', hexagram: toHex(suiZhubi) }
       : { school: '黄畿', hexagram: toHex(suiHuangji) },
-    month: toHex(getYueHexagram(ganzhiIndex(pillars.monthGz))),
-    day: toHex(getRiHexagram(ganzhiIndex(pillars.dayGz))),
-    hour: toHex(getShiChenHexagram(mod(ZHI.indexOf(pillars.hourBranch), 12))),
+    month,
+    day,
+    hour,
+    monthDayHourSource,
   };
 }

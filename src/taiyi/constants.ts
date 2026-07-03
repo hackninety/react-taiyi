@@ -198,6 +198,10 @@ export const JIEQI_WANG_GONG: Map<string, number> = zipMap(
   WANGZHUAI_NUM,
 );
 
+/** 太乙历法验证范围（lunar-typescript 干支/节气与 sxtwl 对照验证过的区间） */
+export const TAIYI_MIN_YEAR = 600;
+export const TAIYI_MAX_YEAR = 9999;
+
 /** 计式名 */
 export const JI_NAME: Record<number, string> = { 0: '年計', 1: '月計', 2: '日計', 3: '時計', 4: '分計' };
 /** 积年流派名 */

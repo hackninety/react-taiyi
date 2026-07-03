@@ -1,6 +1,11 @@
 import type { AcumYear, HuangjiSchool, JiStyle, Sex, TaiyiInput } from '../taiyi';
-import { JI_NAME, METHOD_NAME } from '../taiyi';
+import {
+  JI_NAME, METHOD_NAME,
+  TAIYI_MIN_YEAR, TAIYI_MAX_YEAR, HUANGJI_MIN_YEAR, HUANGJI_MAX_YEAR,
+} from '../taiyi';
 import { PROVINCES } from '../lib/cities';
+
+const clampInt = (v: number, min: number, max: number) => Math.min(max, Math.max(min, Math.trunc(v)));
 
 export interface SolarTimeSetting {
   enabled: boolean;
@@ -66,20 +71,71 @@ export function InputPanel({
     <section className="input-card">
       <div className="input-card-head">输入起局时间 · 五计式 × 四积年流派 · 数据全在本地计算</div>
       <div className="input-panel">
-        <div className="field">
-          <label htmlFor="date">公历日期</label>
-          <input
-            id="date"
-            type="date"
-            value={dateStr}
-            min="0600-01-01"
-            max="9999-12-31"
-            onChange={(ev) => {
-              const [y, m, d] = ev.target.value.split('-').map(Number);
-              if (y && m && d) set({ year: y, month: m, day: d });
-            }}
-          />
-        </div>
+        {showHuangji ? (
+          // 皇极全跨度模式：数字输入支持公元前（负数年，天文纪年 0 = 公元前 1 年）
+          <div className="field">
+            <label htmlFor="hj-year">公历年·月·日（皇极全跨度）</label>
+            <div className="ymd-inputs">
+              <input
+                id="hj-year"
+                type="number"
+                className="ymd-year"
+                value={value.year}
+                min={HUANGJI_MIN_YEAR}
+                max={HUANGJI_MAX_YEAR}
+                title={`公元前 67016 — 公元 62583（负数为公元前，0 = 公元前 1 年）`}
+                onChange={(ev) => {
+                  const y = Number(ev.target.value);
+                  if (ev.target.value !== '' && Number.isFinite(y)) {
+                    set({ year: clampInt(y, HUANGJI_MIN_YEAR, HUANGJI_MAX_YEAR) });
+                  }
+                }}
+              />
+              <span className="ymd-sep">年</span>
+              <input
+                type="number"
+                className="ymd-md"
+                aria-label="月"
+                value={value.month}
+                min={1}
+                max={12}
+                onChange={(ev) => {
+                  const m = Number(ev.target.value);
+                  if (ev.target.value !== '' && Number.isFinite(m)) set({ month: clampInt(m, 1, 12) });
+                }}
+              />
+              <span className="ymd-sep">月</span>
+              <input
+                type="number"
+                className="ymd-md"
+                aria-label="日"
+                value={value.day}
+                min={1}
+                max={31}
+                onChange={(ev) => {
+                  const d = Number(ev.target.value);
+                  if (ev.target.value !== '' && Number.isFinite(d)) set({ day: clampInt(d, 1, 31) });
+                }}
+              />
+              <span className="ymd-sep">日</span>
+            </div>
+          </div>
+        ) : (
+          <div className="field">
+            <label htmlFor="date">公历日期</label>
+            <input
+              id="date"
+              type="date"
+              value={dateStr}
+              min="0600-01-01"
+              max="9999-12-31"
+              onChange={(ev) => {
+                const [y, m, d] = ev.target.value.split('-').map(Number);
+                if (y && m && d) set({ year: y, month: m, day: d });
+              }}
+            />
+          </div>
+        )}
         <div className="field">
           <label htmlFor="time">时间</label>
           <input
@@ -164,7 +220,14 @@ export function InputPanel({
             <input
               type="checkbox"
               checked={showHuangji}
-              onChange={(ev) => onShowHuangjiChange(ev.target.checked)}
+              onChange={(ev) => {
+                const checked = ev.target.checked;
+                onShowHuangjiChange(checked);
+                // 退出全跨度模式时，把范围外年份拉回太乙历法区间
+                if (!checked && (value.year < TAIYI_MIN_YEAR || value.year > TAIYI_MAX_YEAR)) {
+                  set({ year: clampInt(new Date().getFullYear(), TAIYI_MIN_YEAR, TAIYI_MAX_YEAR) });
+                }
+              }}
             />
             皇极
           </label>

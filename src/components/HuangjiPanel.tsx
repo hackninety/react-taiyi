@@ -1,4 +1,5 @@
 import type { HuangjiInfo } from '../taiyi';
+import { formatGregorianYearCn } from '../taiyi';
 
 interface Props {
   info: HuangjiInfo;
@@ -25,7 +26,7 @@ export function HuangjiPanel({ info: h }: Props) {
       <div className="row">
         <span className="row-label">皇极纪年</span>
         <span className="row-value">
-          第 {h.huangjiYear.toLocaleString('en-US')} 年
+          第 {h.huangjiYear.toLocaleString('en-US')} 年，对应{formatGregorianYearCn(h.huangjiYear - 67017)}
           <em>（一元 129,600 年，元起于公元前 67017 年）</em>
         </span>
       </div>
@@ -65,13 +66,20 @@ export function HuangjiPanel({ info: h }: Props) {
         <span className="row-label">月 / 日 / 时卦</span>
         <span className="row-value">
           <Hex h={h.month} /> / <Hex h={h.day} /> / <Hex h={h.hour} />
+          <em>
+            {h.monthDayHourSource === '四柱'
+              ? '（按太乙盘四柱起）'
+              : '（按公历日期起：拟推格里历+天文节气，古远年份民用日期或有 ±1 日差）'}
+          </em>
         </span>
       </div>
       <p className="mingfa-note">
-        皇极经世为邵雍以易数纪史之历：元统十二会、会统三十运、运统十二世、世统三十年。
+        皇极经世为邵雍以易数纪史之历：元统十二会、会统三十运、运统十二世、世统三十年，
+        一元全跨度公元前 67016 — 公元 62583 均可推算（勾选「皇极」后年份输入即解锁全跨度；
+        太乙主盘仍限公元 600–9999，范围外仅出本卡）。
         运卦世卦两派同法；岁卦黄畿用「运卦变经卦、挨六十卦次」（已对照原文校验，默认），
         祝泌《观物篇解》用「先天六十卦序平推」（未对照原文，仅供参考），可在上方切换。
-        月卦日卦依「日甲月子，合乎为复」以本盘月柱日柱起，时卦取十二消息卦。
+        月卦日卦依「日甲月子，合乎为复」起，时卦取十二消息卦。
         算法直接引用开源库 yhys-core（github:hackninety/react-yhys），随上游更新。
       </p>
     </section>

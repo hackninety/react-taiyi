@@ -4,8 +4,41 @@
 import type { ExportPayload } from '../taiyi';
 import { toJSONText } from '../taiyi';
 
+/** 仅皇极模式（起局年份超出太乙历法范围）：单独的元会运世分析提示词 */
+function generateHuangjiOnlyPrompt(jsonStr: string): string {
+  return `你是一位精通邵雍《皇极经世书》元会运世体系的资深易学分析师。请根据以下推算数据，对该年份所处的历史周期与卦运大势进行深入分析。
+
+**阅读顺序（重要）**：请先读 JSON 顶部的 \`meta\`（口径明细）——尤其**皇极岁卦流派**及其校验状态（黄畿派已对照原文校验；祝泌派未校订、仅供参考），全程锁定该口径；再读 \`analysisContext.皇极大势\`；最后以 \`huangji\` 原始字段核对展开。本次起局年份超出太乙历法验证范围（公元 600–9999），故无太乙主盘，仅推皇极经世历（一元全跨度：公元前 67016 — 公元 62583）。
+
+\`\`\`json
+${jsonStr}
+\`\`\`
+
+## 请按以下框架逐项展开分析
+
+### 1. 元会运世定位
+- 该年在一元 129,600 年中的坐标：第几会（辟卦）、第几运、第几世、世内第几年
+- 所处会的宏观意涵（如午会阳极转阴、子会一阳来复等）与历史阶段类比
+
+### 2. 运卦与世卦承变
+- 运卦（主卦变爻而来）的卦义及其统摄的 360 年大势
+- 世卦的卦义及其统摄的 30 年中势，与运卦的承接关系
+
+### 3. 岁卦与十年卦
+- 本年岁卦卦义（注明所用流派与校验状态；若为祝泌派须声明结果仅供参考）
+- 十年卦所示当前十年段的趋向
+- 月卦/日卦/时卦（若有）的短周期呼应，并注意其取数口径（拟推格里历）
+
+### 4. 综合大势
+- 综合各层卦象给出该年份的时代特征与大势判断
+- 若该年对应已知历史时期，可与史实互证（注明属推演类比）
+
+要求：分析须引用 JSON 中的具体数据作为论据（会/运/世序号、卦名、变爻），术语须配通俗解释；古远年份的公历日期为拟推格里历，民用历日可能有出入，分析以年为主。皇极经世属传统易学文化，请以文化研究视角推演。`;
+}
+
 export function generateAIPrompt(payload: ExportPayload): string {
   const jsonStr = toJSONText(payload);
+  if (!payload.result) return generateHuangjiOnlyPrompt(jsonStr);
   const hasMingfa = Boolean(payload.mingfa);
   const hasPlanets = Boolean(payload.planets);
   const hasHuangji = Boolean(payload.huangji);

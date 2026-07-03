@@ -42,9 +42,13 @@ export function ExportCard({ payload }: Props) {
   const json = useMemo(() => toJSONText(payload), [payload]);
 
   const stamp = () => {
-    const { year, month, day, hour, minute } = payload.result.input;
+    const src = payload.result?.input ?? payload.huangjiOnlyInput;
+    if (!src) return 'taiyi-export';
+    const { year, month, day, hour, minute } = src;
     const p = (n: number, w = 2) => String(n).padStart(w, '0');
-    return `taiyi-${p(year, 4)}${p(month)}${p(day)}-${p(hour)}${p(minute)}`;
+    const prefix = payload.result ? 'taiyi' : 'huangji';
+    const yearPart = year < 0 ? `BC${String(1 - year).padStart(4, '0')}` : p(year, 4);
+    return `${prefix}-${yearPart}${p(month)}${p(day)}-${p(hour)}${p(minute)}`;
   };
 
   const doCopy = async (text: string, okMsg: string) => {

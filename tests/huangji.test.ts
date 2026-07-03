@@ -94,6 +94,33 @@ describe('皇极经世历', () => {
     expect(first.shi.global).toBe(1);
   });
 
+  it('公元前文献锚点（yhys 黄畿注校验点：尧甲辰=隨、孔子庚戌=履）', () => {
+    // 尧即位甲辰 = 公元前 2357 年（天文纪年 -2356）
+    const yao = calculateHuangji(-2356, '黄畿', { month: 3, day: 15, hour: 12 });
+    expect(yao.sui.name).toBe('隨');
+    expect(yao.monthDayHourSource).toBe('公历日期');
+    expect(yao.month.name).not.toBe('?');
+    expect(yao.day.name).not.toBe('?');
+    expect(yao.hour.name).toBe('姤'); // 午时消息卦
+    // 孔子生庚戌 = 公元前 551 年（天文纪年 -550）
+    expect(calculateHuangji(-550, '黄畿', { month: 9, day: 28, hour: 8 }).sui.name).toBe('履');
+  });
+
+  it('一元跨度两端与越界', () => {
+    const first = calculateHuangji(-67016, '黄畿', { month: 1, day: 1, hour: 0 });
+    expect(first.huangjiYear).toBe(1);
+    expect(first.hui.ordinal).toBe(1);
+    expect(first.sui.name).toBe('復');
+    const last = calculateHuangji(62583, '黄畿', { month: 12, day: 31, hour: 23 });
+    expect(last.huangjiYear).toBe(129600);
+    expect(last.hui.ordinal).toBe(12);
+    expect(last.hui.branch).toBe('亥');
+    expect(last.shi.global).toBe(4320);
+    expect(last.shi.yearInShi).toBe(30);
+    expect(() => calculateHuangji(-67017, '黄畿', { month: 1, day: 1, hour: 0 })).toThrow();
+    expect(() => calculateHuangji(62584, '黄畿', { month: 1, day: 1, hour: 0 })).toThrow();
+  });
+
   it('600–9999 全范围不抛错且层级自洽', () => {
     for (const year of [600, 1000, 1582, 1900, 2500, 5000, 9999]) {
       const h = hj(year);

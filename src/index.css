@@ -375,6 +375,51 @@ body {
   margin-bottom: 16px;
 }
 
+/* 范围提示横幅（皇极全跨度模式） */
+.info-banner {
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid var(--line-strong);
+  color: var(--gold-light);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.12);
+}
+
+/* 仅皇极模式的单栏布局 */
+.content-single {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* 皇极全跨度年月日数字输入 */
+.ymd-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ymd-inputs input[type='number'] {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) * 0.7);
+  padding: 7px 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color-scheme: dark;
+}
+
+.ymd-year { width: 6.5em; }
+.ymd-md { width: 3.6em; }
+
+.ymd-sep {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
 /* ── 布局 ── */
 .content {
   display: grid;

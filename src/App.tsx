@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   calculateTaiyi, calculateMingfa, calculateHuangji, loadStarsData, findStars, starsLoaded, applyTrueSolarTime,
+  formatGregorianYearCn, TAIYI_MIN_YEAR, TAIYI_MAX_YEAR,
 } from './taiyi';
 import type { HuangjiInfo, HuangjiSchool, MingfaResult, Sex, SolarTimeInfo, TaiyiInput, TaiyiResult } from './taiyi';
 import { findLongitude } from './lib/cities';
@@ -55,12 +56,15 @@ export default function App() {
     return () => { cancelled = true; };
   }, [showTenjing]);
 
-  // 真太阳时校正后的实际排盘输入
+  // 太乙历法验证范围；范围外（皇极全跨度模式）只推皇极经世历
+  const taiyiInRange = input.year >= TAIYI_MIN_YEAR && input.year <= TAIYI_MAX_YEAR;
+
+  // 真太阳时校正后的实际排盘输入（范围外无太乙盘，分钟级校正无意义，跳过）
   const { effectiveInput, solarInfo } = useMemo<{
     effectiveInput: TaiyiInput;
     solarInfo: SolarTimeInfo;
   }>(() => {
-    if (!solar.enabled) return { effectiveInput: input, solarInfo: { applied: false } };
+    if (!solar.enabled || !taiyiInRange) return { effectiveInput: input, solarInfo: { applied: false } };
     const lng = findLongitude(solar.province, solar.city, solar.district);
     if (lng === undefined) return { effectiveInput: input, solarInfo: { applied: false } };
     const adjusted = applyTrueSolarTime(input.year, input.month, input.day, input.hour, input.minute, lng);
@@ -81,12 +85,13 @@ export default function App() {
   }, [input, solar]);
 
   const { result, error } = useMemo<{ result: TaiyiResult | null; error: string | null }>(() => {
+    if (!taiyiInRange) return { result: null, error: null };
     try {
       return { result: calculateTaiyi(effectiveInput), error: null };
     } catch (e) {
       return { result: null, error: e instanceof Error ? e.message : String(e) };
     }
-  }, [effectiveInput]);
+  }, [effectiveInput, taiyiInRange]);
 
   const mingfa = useMemo<MingfaResult | null>(() => {
     if (!showMingfa || !result) return null;
@@ -102,18 +107,18 @@ export default function App() {
     return findStars(effectiveInput.year, effectiveInput.month, effectiveInput.day);
   }, [showTenjing, tenjingReady, effectiveInput.year, effectiveInput.month, effectiveInput.day]);
 
-  const huangji = useMemo<HuangjiInfo | null>(() => {
-    if (!showHuangji || !result) return null;
+  // 皇极经世历：范围内以太乙四柱起月日时卦；范围外（全跨度）以公历日期起
+  const { huangji, huangjiError } = useMemo<{ huangji: HuangjiInfo | null; huangjiError: string | null }>(() => {
+    if (!showHuangji) return { huangji: null, huangjiError: null };
     try {
-      return calculateHuangji(effectiveInput.year, huangjiSchool, {
-        monthGz: result.ganzhi[1],
-        dayGz: result.ganzhi[2],
-        hourBranch: result.ganzhi[3][1],
-      });
-    } catch {
-      return null;
+      const source = result
+        ? { monthGz: result.ganzhi[1], dayGz: result.ganzhi[2], hourBranch: result.ganzhi[3][1] }
+        : { month: effectiveInput.month, day: effectiveInput.day, hour: effectiveInput.hour };
+      return { huangji: calculateHuangji(effectiveInput.year, huangjiSchool, source), huangjiError: null };
+    } catch (e) {
+      return { huangji: null, huangjiError: e instanceof Error ? e.message : String(e) };
     }
-  }, [showHuangji, huangjiSchool, effectiveInput.year, result]);
+  }, [showHuangji, huangjiSchool, effectiveInput, result]);
 
   const solarHint = solarInfo.applied
     ? `${solarInfo.offsetMinutes! >= 0 ? '+' : ''}${solarInfo.offsetMinutes} 分钟 → ${String(solarInfo.adjusted!.hour).padStart(2, '0')}:${String(solarInfo.adjusted!.minute).padStart(2, '0')} 起局`
@@ -169,7 +174,17 @@ export default function App() {
         />
 
         {error && <div className="error">排盘失败：{error}</div>}
+        {huangjiError && <div className="error">皇极推算失败：{huangjiError}</div>}
         {tenjingError && <div className="error">十精数据加载失败：{tenjingError}</div>}
+
+        {!taiyiInRange && (
+          <div className="info-banner">
+            当前年份 {formatGregorianYearCn(input.year)} 超出太乙历法验证范围（公元 {TAIYI_MIN_YEAR}–{TAIYI_MAX_YEAR}），
+            太乙主盘不出盘；{showHuangji
+              ? '以下按皇极经世一元全跨度（公元前 67016 — 公元 62583）单独推算元会运世。'
+              : '请勾选「皇极」以按一元全跨度推算元会运世，或将年份改回范围内。'}
+          </div>
+        )}
 
         {result && (
           <>
@@ -182,6 +197,24 @@ export default function App() {
               </div>
             </main>
             <ExportCard payload={{ result, mingfa, planets, solarTime: solarInfo, huangji }} />
+          </>
+        )}
+
+        {!result && huangji && (
+          <>
+            <main className="content-single">
+              <HuangjiPanel info={huangji} />
+            </main>
+            <ExportCard
+              payload={{
+                result: null,
+                huangji,
+                huangjiOnlyInput: {
+                  year: input.year, month: input.month, day: input.day,
+                  hour: input.hour, minute: input.minute,
+                },
+              }}
+            />
           </>
         )}
         </div>

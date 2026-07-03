@@ -91,6 +91,38 @@ describe('导出', () => {
   });
 });
 
+describe('仅皇极模式导出（太乙范围外）', () => {
+  const huangji = calculateHuangji(-2356, '黄畿', { month: 3, day: 15, hour: 12 });
+  const payload = {
+    result: null,
+    huangji,
+    huangjiOnlyInput: { year: -2356, month: 3, day: 15, hour: 12, minute: 0 },
+  };
+
+  it('JSON 无 result、含 meta 未出盘说明与皇极数据', () => {
+    const parsed = JSON.parse(toJSONText(payload));
+    expect(parsed.result).toBeUndefined();
+    expect(String(parsed.meta.太乙主盘)).toContain('未出盘');
+    expect(parsed.huangji.sui.name).toBe('隨');
+    expect(parsed.analysisContext.皇极大势).toContain('隨');
+  });
+
+  it('Markdown 为皇极单页且标注公元前年份', () => {
+    const md = toMarkdown(payload);
+    expect(md).toContain('# 皇极经世历 · 公元前 2357 年');
+    expect(md).toContain('## 推算明细');
+    expect(md).toContain('岁卦（黄畿派）：隨');
+    expect(md).not.toContain('## 十六神式盘');
+  });
+
+  it('AI Prompt 用元会运世专用框架', () => {
+    const prompt = generateAIPrompt(payload);
+    expect(prompt).toContain('### 1. 元会运世定位');
+    expect(prompt).toContain('皇极岁卦流派');
+    expect(prompt).not.toContain('主客定算');
+  });
+});
+
 describe('真太阳时', () => {
   it('经度每度校正 4 分钟（乌鲁木齐约 -130 分钟）', () => {
     const lng = findLongitude('新疆', '乌鲁木齐', '市区')!;
