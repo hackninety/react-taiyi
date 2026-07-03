@@ -1,6 +1,11 @@
 # 计划：直接引用 kintaiyi 作为「权威排盘源」+ 圆盘/方盘双渲染
 
-> 本文档为**规划稿**，供下一次对话执行。当前对话不落地实现。
+> **状态：已执行（2026-07-03）。** 用户拍板：后端独立仓
+> [python-taiyi](https://github.com/hackninety/python-taiyi)（部署于 US_0x7c `/opt/python-taiyi`，
+> nginx vhost `taiyi-api.0x7c.cc`）；圆盘走 SVG（直接采用 **kintaiyi 原生 drawsvg 圆盘**，经
+> `/api/taiyi/pan.svg` 输出，比自绘更忠实且随上游同步）；**后端优先**、API 不可用自动回退本地并提示
+> （见 src/taiyi/remote.ts 与 SourceBar）；docker-compose 单机 + Nginx/CF 反代 HTTPS、无鉴权。
+> 本文其余部分保留为设计依据与背景。
 > 目标回应：`能否直接引用 kintaiyi 全部内容，随它实时更新而同步；并在其上扩展（皇极经世历、圆盘+方盘双渲染）；若需 Python 后端则设计前后端排盘。`
 
 ---

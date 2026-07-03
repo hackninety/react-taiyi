@@ -57,6 +57,9 @@ const SECTIONS: Section[] = [
         <ol className="gsteps">
           <li>选择<strong>公历日期与时间</strong>，或点「✦ 此刻」取当前时间。默认支持公元 600–9999 年；
             勾选「皇极」后解锁至一元全跨度（公元前 67016 — 公元 62583，负数年即公元前）。</li>
+          <li><strong>数据源「后端优先」</strong>：默认调用 python-taiyi 后端（直接运行上游 kintaiyi 源码，随上游更新），
+            返回结果与本地引擎逐字段对照——一致标注「✓」，不一致醒目提示差异（漂移报警）；
+            后端不可用时自动回退本地引擎并提示。方盘之外并列渲染 kintaiyi 原生 SVG 圆盘，双盘/方盘/圆盘可切。</li>
           <li>选择<strong>计式</strong>（问什么用什么计，见下节）与<strong>积年法</strong>（不确定就用默认的太乙统宗）。</li>
           <li>可选项：出生地/所在地在西部或东部时勾选<strong>真太阳时</strong>；想看七曜落位勾<strong>十精</strong>；
             排个人命盘勾<strong>命法</strong>并选男女。</li>

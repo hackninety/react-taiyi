@@ -29,6 +29,13 @@
   公元前推算经文献锚点验证（尧甲辰=随、孔子庚戌=履，年柱自洽甲辰/庚戌）。
   算法**直接引用**开源库 [`yhys-core`](https://github.com/hackninety/react-yhys)
   （`npm i github:hackninety/react-yhys`），随上游更新而更新
+- **kintaiyi 权威后端（后端优先 · 自动回退）**：默认调用
+  [python-taiyi](https://github.com/hackninety/python-taiyi) API——后端直接运行上游
+  kentang2017/kintaiyi 源码（pin SHA，升级即同步），返回结果与本地 TS 引擎**逐字段对照**：
+  一致则标注「✓ 逐字段一致」，不一致则醒目列出差异（上游漂移报警）；
+  后端不可用/超时/已知崩溃组合自动回退本地引擎并明显提示。数据源与 API 地址可在盘面上方切换
+- **方盘 + 圆盘双渲染**：本地 5×5 十六神方盘之外，同参数并列展示
+  **kintaiyi 原生 drawsvg 圆盘**（由后端渲染 SVG，随上游样式实时更新），双盘/方盘/圆盘可切换
 - **AI 导出**：复制/下载 JSON 与 Markdown，均在开头附 `meta`（口径明细，重点标注太乙积年流派
   与皇极岁卦流派，防止多流派数据混用）与 `analysisContext`（程序预先归集的断事要点）；
   另有**一键复制 AI Prompt**，引导 AI 先锁定流派口径再展开分析
@@ -37,7 +44,7 @@
 
 | 项目 | 用途 |
 |---|---|
-| [kentang2017/kintaiyi](https://github.com/kentang2017/kintaiyi)（MIT） | 主要移植蓝本：积年积算、七十二局表、十六神、主客定算三将、格局、八门、神煞；并作为黄金用例参考实现 |
+| [kentang2017/kintaiyi](https://github.com/kentang2017/kintaiyi)（MIT） | 主要移植蓝本：积年积算、七十二局表、十六神、主客定算三将、格局、八门、神煞；并作为黄金用例参考实现。经 [python-taiyi](https://github.com/hackninety/python-taiyi) 后端**直接运行其源码**（后端优先数据源 + 原生圆盘 SVG），随上游更新 |
 | [wlhyl/taiyipython](https://github.com/wlhyl/taiyipython) | 推导式算法交叉验证（金镜积年、十六神盘循环累加求算、三基/五福起例） |
 | [hhszzzz/taibu](https://github.com/hhszzzz/taibu) | 工程架构参考（domain 分层）；其“太乙”为九星简化视角，未采用 |
 | [dglijin-oss/taiyi-skill](https://github.com/dglijin-oss/taiyi-skill) | 格局解读规则参考 |

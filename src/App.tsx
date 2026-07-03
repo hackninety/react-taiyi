@@ -6,9 +6,17 @@ import {
 } from './taiyi';
 import type { HuangjiInfo, MingfaResult, Sex, SolarTimeInfo, TaiyiInput, TaiyiResult } from './taiyi';
 import { findLongitude } from './lib/cities';
+import {
+  fetchRemoteChart, compareRemote, panSvgUrl,
+  getApiBase, saveApiBase, getDataSource, saveDataSource,
+} from './taiyi/remote';
+import type { DataSource } from './taiyi/remote';
 import { InputPanel } from './components/InputPanel';
 import type { SolarTimeSetting } from './components/InputPanel';
 import { Board } from './components/Board';
+import { CircularBoard } from './components/CircularBoard';
+import { SourceBar } from './components/SourceBar';
+import type { RemoteState } from './components/SourceBar';
 import { ResultPanel } from './components/ResultPanel';
 import { MingfaPanel } from './components/MingfaPanel';
 import { HuangjiPanel } from './components/HuangjiPanel';
@@ -46,6 +54,11 @@ export default function App() {
   const [tenjingReady, setTenjingReady] = useState(false);
   const [tenjingError, setTenjingError] = useState<string | null>(null);
   const [showHuangji, setShowHuangji] = useState(false);
+  // kintaiyi 权威后端（后端优先，不可用自动回退本地并提示）
+  const [dataSource, setDataSource] = useState<DataSource>(getDataSource);
+  const [apiBase, setApiBase] = useState<string>(getApiBase);
+  const [remote, setRemote] = useState<RemoteState>({ phase: 'off' });
+  const [boardView, setBoardView] = useState<'both' | 'square' | 'circle'>('both');
   const [solar, setSolar] = useState<SolarTimeSetting>({
     enabled: false,
     mode: 'auto',
@@ -147,6 +160,38 @@ export default function App() {
     }
   }, [showHuangji, effectiveInput]);
 
+  // 后端优先：请求 kintaiyi 权威后端并与本地引擎逐字段对照；失败自动回退本地
+  useEffect(() => {
+    if (dataSource !== 'remote' || !result || !taiyiInRange) {
+      setRemote({ phase: 'off' });
+      return;
+    }
+    let active = true;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    setRemote({ phase: 'checking' });
+    fetchRemoteChart(effectiveInput, apiBase, ctrl.signal)
+      .then((resp) => {
+        if (!active) return;
+        setRemote({ phase: 'ok', ref: resp.ref, diffs: compareRemote(result, resp.chart) });
+      })
+      .catch((e: unknown) => {
+        if (!active) return;
+        const reason = ctrl.signal.aborted ? '请求超时' : e instanceof Error ? e.message : String(e);
+        setRemote({ phase: 'fallback', reason });
+      })
+      .finally(() => clearTimeout(timer));
+    return () => { active = false; clearTimeout(timer); ctrl.abort(); };
+  }, [dataSource, apiBase, effectiveInput, result, taiyiInRange]);
+
+  const remoteOk = remote.phase === 'ok';
+  const circularUrl = remoteOk ? panSvgUrl(effectiveInput, apiBase, Boolean(planets)) : null;
+  const circularNote = dataSource === 'local'
+    ? '当前为「仅本地引擎」模式，切换数据源后显示'
+    : remote.phase === 'fallback' ? '后端不可用，暂无法渲染（方盘不受影响）'
+    : remote.phase === 'checking' ? '后端连接中…'
+    : !taiyiInRange ? '范围外拟推口径暂不支持' : undefined;
+
   const solarHint = solarInfo.applied
     ? `${solarInfo.place}（${formatUtcOffset(solarInfo.tzOffsetMinutes!)}）${solarInfo.offsetMinutes! >= 0 ? '+' : ''}${solarInfo.offsetMinutes} 分钟 → ${String(solarInfo.adjusted!.hour).padStart(2, '0')}:${String(solarInfo.adjusted!.minute).padStart(2, '0')} 起局`
     : null;
@@ -211,10 +256,36 @@ export default function App() {
           </div>
         )}
 
+        {result && taiyiInRange && (
+          <SourceBar
+            dataSource={dataSource}
+            onDataSourceChange={(v) => { setDataSource(v); saveDataSource(v); }}
+            apiBase={apiBase}
+            onApiBaseChange={(v) => setApiBase(saveApiBase(v))}
+            remote={remote}
+            outOfRange={!taiyiInRange}
+          />
+        )}
+
         {result && (
           <>
             <main className="content">
-              <Board result={result} planets={planets} />
+              <div className="board-col">
+                <div className="board-tabs" role="tablist" aria-label="盘面视图">
+                  {([['both', '双盘'], ['square', '方盘'], ['circle', '圆盘']] as const).map(([k, label]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className={boardView === k ? 'active' : ''}
+                      onClick={() => setBoardView(k)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {boardView !== 'circle' && <Board result={result} planets={planets} />}
+                {boardView !== 'square' && <CircularBoard url={circularUrl} note={circularNote} />}
+              </div>
               <div className="result-panel">
                 {huangji && <HuangjiPanel info={huangji} />}
                 {mingfa && <MingfaPanel mingfa={mingfa} />}

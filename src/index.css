@@ -857,3 +857,155 @@ body {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ── 数据源状态条（kintaiyi 后端优先 / 本地回退） ── */
+.source-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: rgba(13, 17, 28, 0.72);
+  font-size: 0.82rem;
+}
+
+.src-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.api-input {
+  min-width: 220px;
+  flex: 0 1 260px;
+  font-size: 0.78rem;
+  padding: 4px 8px;
+}
+
+.src-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  line-height: 1.5;
+}
+
+.src-chip.ok {
+  color: #86d993;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.src-chip.checking {
+  color: var(--ink-dim);
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.src-chip.off {
+  color: var(--ink-dim);
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.src-chip.warn {
+  color: #f0c674;
+  background: rgba(240, 198, 116, 0.1);
+  border-color: rgba(240, 198, 116, 0.4);
+}
+
+.src-chip.err {
+  color: #f2928c;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.src-diffs {
+  flex-basis: 100%;
+  font-size: 0.78rem;
+}
+
+.src-diffs summary { cursor: pointer; color: var(--ink-dim); }
+
+.src-diffs table {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+}
+
+.src-diffs th, .src-diffs td {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  text-align: left;
+  word-break: break-all;
+}
+
+.src-diffs tr.drift td { color: #f0c674; }
+.src-diffs tr.known td { color: var(--ink-dim); }
+
+/* ── 方盘/圆盘双渲染 ── */
+.board-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-self: start;
+  position: sticky;
+  top: 12px;
+}
+
+/* 盘列自身接管 sticky；内部方盘还原为普通流 */
+.board-col .board { position: static; top: auto; }
+
+.board-tabs {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.board-tabs button {
+  font-size: 0.78rem;
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(13, 17, 28, 0.72);
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.board-tabs button.active {
+  color: var(--gold, #d4af37);
+  border-color: rgba(212, 175, 55, 0.55);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.18);
+}
+
+.circular-board {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 42%, rgba(24, 30, 46, 0.9), rgba(9, 12, 20, 0.95));
+  padding: 10px;
+  text-align: center;
+}
+
+.circular-board img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.circular-board.loading img { opacity: 0.25; }
+
+.circular-board .cb-hint,
+.circular-board.placeholder span {
+  display: block;
+  padding: 18px 10px;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 980px) {
+  .board-col { position: static; }
+  .api-input { flex-basis: 100%; }
+}
