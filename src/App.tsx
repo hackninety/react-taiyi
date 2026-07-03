@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   calculateTaiyi, calculateMingfa, calculateHuangji, loadStarsData, findStars, starsLoaded,
-  applyTrueSolarTime, browserTzOffsetMinutes, tzAutoLocation,
+  applyTrueSolarTime, browserTimeZone, browserTzOffsetMinutes, tzAutoLocation, CN_TZ_OFFSET_MINUTES,
   formatGregorianYearCn, TAIYI_MIN_YEAR, TAIYI_MAX_YEAR, buildRemoteResult,
 } from './taiyi';
 import { loadExamples, matchExamples } from './lib/examples';
@@ -21,7 +21,9 @@ import { LiuTimeline } from './components/LiuTimeline';
 import { LifeCards } from './components/LifeCards';
 import { DocsView } from './components/DocsPages';
 import { InputPanel } from './components/InputPanel';
-import type { SolarTimeSetting } from './components/InputPanel';
+import type { ResidenceSetting, SolarTimeSetting } from './components/InputPanel';
+import { fetchLiu } from './taiyi/pan';
+import type { LiuState } from './components/LiuTimeline';
 import { Board } from './components/Board';
 import { CircularBoard } from './components/CircularBoard';
 import { SourceBar } from './components/SourceBar';
@@ -89,6 +91,12 @@ export default function App() {
   >({ phase: 'idle' });
   // 局數史例命中（该年份的史载纪事，展示并入 AI 导出）
   const [historyMatches, setHistoryMatches] = useState<ExampleRow[]>([]);
+  // 流卦運多期（提升到 App：时间轴显示 + 并入 AI 导出）
+  const [liu, setLiu] = useState<LiuState>({ phase: 'idle' });
+  // 常居住地（不参与推算，随导出供 AI 作命盘人事断的地域参照）
+  const [residence, setResidence] = useState<ResidenceSetting>({
+    enabled: false, province: '北京', city: '北京', district: '市区',
+  });
   const [boardView, setBoardView] = useState<'both' | 'square' | 'circle'>('both');
   const [solar, setSolar] = useState<SolarTimeSetting>({
     enabled: false,
@@ -117,7 +125,12 @@ export default function App() {
     effectiveInput: TaiyiInput;
     solarInfo: SolarTimeInfo;
   }>(() => {
-    if (!solar.enabled || !taiyiInRange) return { effectiveInput: input, solarInfo: { applied: false } };
+    // 未校正时也带上浏览器时区信息（供导出标注输入时间的解释口径）
+    const browserTz = {
+      timezone: browserTimeZone(),
+      tzOffsetMinutes: browserTzOffsetMinutes(input.year, input.month, input.day, input.hour, input.minute),
+    };
+    if (!solar.enabled || !taiyiInRange) return { effectiveInput: input, solarInfo: { applied: false, ...browserTz } };
     let lng: number | undefined;
     let place: string;
     let timezone: string | undefined;
@@ -129,10 +142,12 @@ export default function App() {
     } else {
       lng = findLongitude(solar.province, solar.city, solar.district);
       place = solar.district === '市区' ? solar.city : `${solar.city}·${solar.district}`;
+      timezone = '中国标准时间';
     }
-    if (lng === undefined) return { effectiveInput: input, solarInfo: { applied: false } };
-    // 输入时间按浏览器本地时区解释：校正量 = 经度×4 − 本地时区偏移
-    const tzOffset = browserTzOffsetMinutes(input.year, input.month, input.day, input.hour, input.minute);
+    if (lng === undefined) return { effectiveInput: input, solarInfo: { applied: false, ...browserTz } };
+    // 输入时间按所选地点民用时区解释（排盘惯例：生辰即当地钟表时间）——
+    // 城市模式：中国城市恒 UTC+8；自动模式：地点=浏览器时区代表城市，用浏览器时区
+    const tzOffset = solar.mode === 'auto' ? browserTz.tzOffsetMinutes : CN_TZ_OFFSET_MINUTES;
     const adjusted = applyTrueSolarTime(input.year, input.month, input.day, input.hour, input.minute, lng, tzOffset);
     return {
       effectiveInput: { ...input, ...adjusted },
@@ -291,6 +306,27 @@ export default function App() {
   }, [Boolean(result), dataSource, apiBase, effectiveInput.year]);
 
   const remoteOk = taiyiInRange ? remote.phase === 'ok' : guli.phase === 'ok';
+
+  // 流卦運多期：后端可用且年份 ≥ 公元 1（上游 hex_timeline 依 Python datetime）
+  useEffect(() => {
+    const enabled = dataSource === 'remote' && remoteOk && remoteInput.year >= 1;
+    if (!enabled) { setLiu({ phase: 'idle' }); return; }
+    let active = true;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000);
+    setLiu({ phase: 'loading' });
+    fetchLiu(remoteInput, apiBase, ctrl.signal)
+      .then((resp) => { if (active) setLiu({ phase: 'ok', liu: resp.liu }); })
+      .catch((e: unknown) => {
+        if (!active) return;
+        setLiu({
+          phase: 'err',
+          reason: ctrl.signal.aborted ? '请求超时' : e instanceof Error ? e.message : String(e),
+        });
+      })
+      .finally(() => clearTimeout(timer));
+    return () => { active = false; clearTimeout(timer); ctrl.abort(); };
+  }, [dataSource, remoteOk, remoteInput, apiBase]);
   const circularUrl = remoteOk ? panSvgUrl(remoteInput, apiBase, Boolean(planets)) : null;
   const circularNote = dataSource === 'local'
     ? '当前为「仅本地引擎」模式，切换数据源后显示'
@@ -355,6 +391,8 @@ export default function App() {
           solar={solar}
           onSolarChange={setSolar}
           solarHint={solarHint}
+          residence={residence}
+          onResidenceChange={setResidence}
         />
 
         {error && <div className="error">排盘失败：{error}</div>}
@@ -419,9 +457,7 @@ export default function App() {
             </main>
             {(taiyiInRange || guliMode) && (
               <LiuTimeline
-                input={remoteInput}
-                apiBase={apiBase}
-                enabled={remoteOk && remoteInput.year >= 1}
+                state={liu}
                 unavailableNote={
                   remoteInput.year < 1
                     ? '公元前不支持流卦運多期时步（上游 hex_timeline 依 Python datetime，年份下限公元 1 年）。'
@@ -485,6 +521,13 @@ export default function App() {
                 result, mingfa, planets, solarTime: solarInfo, huangji,
                 kintaiyiPan: pan.phase === 'ok' ? pan.data : null,
                 historyExamples: historyMatches.length ? historyMatches : null,
+                liuTimelines: liu.phase === 'ok' ? liu.liu : null,
+                residence: residence.enabled
+                  ? {
+                    province: residence.province, city: residence.city, district: residence.district,
+                    longitude: findLongitude(residence.province, residence.city, residence.district),
+                  }
+                  : null,
               }}
             />
           </>

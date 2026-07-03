@@ -9,6 +9,7 @@ import type { AcumYear, GongName, TaiyiResult } from './types';
 import type { MingfaResult } from './mingfa';
 import type { SolarTimeInfo } from './solartime';
 import type { HuangjiInfo } from './huangji';
+import type { LiuData } from './pan';
 import { formatGregorianYearCn } from './huangji';
 import { SIXTEEN_GOD, NUM_TO_GONG } from './constants';
 
@@ -28,6 +29,10 @@ export interface ExportPayload {
   kintaiyiPan?: Record<string, unknown> | null;
   /** 局數史例命中（该排盘年份的史载纪事，year 为公元前直记；来自上游 docs/example.md） */
   historyExamples?: Array<{ year: number; kook: string; event: string; source: string }> | null;
+  /** 流卦運多期（流年12/流月12/流日15/流時12辰/流分10，上游 hex_timeline 推法直出） */
+  liuTimelines?: LiuData | null;
+  /** 常居住地（不参与推算，供 AI 作命盘人事断的地域参照） */
+  residence?: { province: string; city: string; district: string; longitude?: number } | null;
 }
 
 /** 四流派太乙积年常数（与 engine TN_DICT 一致，导出时注明以防混用） */
@@ -50,17 +55,26 @@ function huangjiSummary(huangji: HuangjiInfo): string {
   );
 }
 
+function utcStr(tzMin: number): string {
+  const tzSign = tzMin >= 0 ? '+' : '-';
+  const tzAbs = Math.abs(tzMin);
+  return `UTC${tzSign}${Math.floor(tzAbs / 60)}${tzAbs % 60 ? `:${String(tzAbs % 60).padStart(2, '0')}` : ''}`;
+}
+
 function solarText(solarTime?: SolarTimeInfo | null): string {
   if (solarTime?.applied) {
     const sign = solarTime.offsetMinutes! >= 0 ? '+' : '';
-    const tzMin = solarTime.tzOffsetMinutes ?? 0;
-    const tzSign = tzMin >= 0 ? '+' : '-';
-    const tzAbs = Math.abs(tzMin);
-    const tzStr = `UTC${tzSign}${Math.floor(tzAbs / 60)}${tzAbs % 60 ? `:${String(tzAbs % 60).padStart(2, '0')}` : ''}`;
-    return `输入时间按浏览器时区 ${solarTime.timezone ?? ''}（${tzStr}）解释，已按 ${solarTime.place}（经度 ${solarTime.longitude}°）校正 ${sign}${solarTime.offsetMinutes} 分钟起局`;
+    return `输入时间按${solarTime.timezone ?? '所选地民用时区'}（${utcStr(solarTime.tzOffsetMinutes ?? 0)}）解释，已按 ${solarTime.place}（经度 ${solarTime.longitude}°）校正 ${sign}${solarTime.offsetMinutes} 分钟起局`;
+  }
+  if (solarTime?.timezone) {
+    return `未校正——输入时间按浏览器时区 ${solarTime.timezone}（${utcStr(solarTime.tzOffsetMinutes ?? 0)}）原样起局`;
   }
   return '未校正（按浏览器本地时间起局）';
 }
+
+const residenceText = (r: NonNullable<ExportPayload['residence']>): string =>
+  `${r.province}·${r.city}${r.district && r.district !== '市区' ? `·${r.district}` : ''}` +
+  (r.longitude !== undefined ? `（经度 ${r.longitude}°）` : '');
 
 /** 口径明细结构（两种模式字段并集，未涉及的项为空） */
 export interface ExportMeta {
@@ -71,6 +85,8 @@ export interface ExportMeta {
   真太阳时?: string;
   /** 仅皇极模式：太乙未出盘的说明 */
   太乙主盘?: string;
+  时区?: string;
+  常居住地?: string;
   皇极岁卦流派?: string;
   皇极月日时卦口径?: string;
   启用模块: string[];
@@ -79,14 +95,17 @@ export interface ExportMeta {
 }
 
 /** 口径明细：AI 读盘前先看这里，重点是流派标注，防止不同流派数据错乱 */
-export function buildMeta({ result: r, mingfa, planets, solarTime, huangji, kintaiyiPan }: ExportPayload): ExportMeta {
+export function buildMeta(payload: ExportPayload): ExportMeta {
+  const { result: r, mingfa, planets, solarTime, huangji, kintaiyiPan, liuTimelines, residence, historyExamples } = payload;
   const payloadHasPan = Boolean(kintaiyiPan && Object.keys(kintaiyiPan).length);
   const modules: string[] = [];
   if (r) modules.push('太乙主盘');
-  if (mingfa) modules.push('太乙命法');
+  if (mingfa) modules.push('太乙命法（含大限：阳九/百六行限）');
   if (planets) modules.push('十精（七曜落位）');
-  if (huangji) modules.push('皇极经世历');
+  if (huangji) modules.push('皇极经世历（元会运世卦历）');
   if (payloadHasPan) modules.push('kintaiyi 全解释盘（統宗寶鑑诸卷）');
+  if (liuTimelines) modules.push('流卦運多期（流年/月/日/時/分）');
+  if (historyExamples?.length) modules.push('局數史例對照');
 
   return {
     应用: 'react-taiyi 太乙神数排盘',
@@ -104,6 +123,10 @@ export function buildMeta({ result: r, mingfa, planets, solarTime, huangji, kint
       : {
         太乙主盘: '未出盘——起局年份超出太乙历法验证范围（公元 600–9999），本导出仅含皇极经世历（一元全跨度：公元前 67016 — 公元 62583）',
       }),
+    ...(solarTime?.timezone
+      ? { 时区: `输入时间解释时区 ${solarTime.timezone}（${utcStr(solarTime.tzOffsetMinutes ?? 0)}）${solarTime.applied ? `；真太阳时地点 ${solarTime.place}（经度 ${solarTime.longitude}°）` : ''}` }
+      : {}),
+    ...(residence ? { 常居住地: `${residenceText(residence)}——命主长期生活地，供人事断的地域参照，不参与排盘` } : {}),
     ...(huangji
       ? {
         皇极岁卦流派: `黄畿（已校订原文；${huangji.algorithmNote}）`,
@@ -119,7 +142,7 @@ export function buildMeta({ result: r, mingfa, planets, solarTime, huangji, kint
 }
 
 /** 断事要点预归集：给 AI 的推理抓手 */
-export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, huangjiOnlyInput, historyExamples }: ExportPayload) {
+export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, huangjiOnlyInput, historyExamples, liuTimelines, residence }: ExportPayload) {
   const ctx: Record<string, unknown> = {};
 
   if (!r) {
@@ -168,12 +191,26 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
       .join('；') + '——该年份见于古籍史例，纪事全文在 historyExamples 字段，断局时可与盘面互证。';
   }
 
+  if (residence) {
+    ctx.常居住地 = `${residenceText(residence)}——命主长期生活地（不参与排盘），人事断可作方位、迁移、地缘之参照。`;
+  }
+
+  if (liuTimelines) {
+    const brief = Object.entries(liuTimelines)
+      .map(([k, rows]) => {
+        const head = rows.slice(0, 3).map((x) => `${x.label}${x.卦}${x.爻名}`).join('→');
+        return `${k}：${head}…（共 ${rows.length} 期）`;
+      })
+      .join('；');
+    ctx.流卦運要 = `${brief}。首期即起局时刻，完整多期序列见 liuTimelines 字段，可据以论近期与流年走势。`;
+  }
+
   if (mingfa) {
     ctx.命法要 =
       `${mingfa.sex}命；命法积数 ${mingfa.lifeAccum}，三才数（天/地/人）${mingfa.threeCai.join('/')}；` +
       `出身卦 ${mingfa.lifeStartGua.gua ?? '—'}；受气干支 ${mingfa.shouqiGanzhi}；` +
       `流年卦链 年${mingfa.yearGua.gua ?? '—'}→月${mingfa.monthGua.gua ?? '—'}→日${mingfa.dayGua.gua ?? '—'}→时${mingfa.hourGua.gua ?? '—'}→分${mingfa.minuteGua.gua ?? '—'}；` +
-      '十二命宫、阳九/百六行限详见 mingfa 字段。';
+      '十二命宫与大限（阳九/百六行限全表）详见 mingfa 字段（yangjiuXingxian/bailiuXingxian）。';
   }
 
   if (huangji) {
@@ -184,14 +221,18 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
 }
 
 export function toJSONText(payload: ExportPayload): string {
-  const { result, mingfa, planets, solarTime, huangji, huangjiOnlyInput, kintaiyiPan, historyExamples } = payload;
+  const {
+    result, mingfa, planets, solarTime, huangji, huangjiOnlyInput,
+    kintaiyiPan, historyExamples, liuTimelines, residence,
+  } = payload;
   return JSON.stringify(
     {
       app: 'react-taiyi',
       exportedAt: new Date().toISOString(),
       meta: buildMeta(payload),
       analysisContext: buildAnalysisContext(payload),
-      ...(solarTime?.applied ? { solarTime } : {}),
+      ...(solarTime?.timezone || solarTime?.applied ? { solarTime } : {}),
+      ...(residence ? { residence } : {}),
       ...(result ? { result } : {}),
       ...(huangjiOnlyInput ? { input: huangjiOnlyInput } : {}),
       ...(mingfa ? { mingfa } : {}),
@@ -201,6 +242,8 @@ export function toJSONText(payload: ExportPayload): string {
       ...(kintaiyiPan ? { kintaiyiPan } : {}),
       // 局數史例命中（该年份的史载纪事，year 为公元前直记；可与盘面互证）
       ...(historyExamples?.length ? { historyExamples } : {}),
+      // 流卦運多期（流年12/流月12/流日15/流時12辰/流分10；首期即起局时刻）
+      ...(liuTimelines ? { liuTimelines } : {}),
     },
     null,
     2,
@@ -267,7 +310,7 @@ function toHuangjiOnlyMarkdown(payload: ExportPayload): string {
 }
 
 export function toMarkdown(payload: ExportPayload): string {
-  const { result: r, mingfa, planets, solarTime, huangji, historyExamples } = payload;
+  const { result: r, mingfa, planets, solarTime, huangji, historyExamples, liuTimelines, residence } = payload;
   if (!r) return toHuangjiOnlyMarkdown(payload);
   const L: string[] = [];
   const { input } = r;
@@ -307,6 +350,12 @@ export function toMarkdown(payload: ExportPayload): string {
   L.push('## 起局与局式');
   L.push('');
   L.push(`- 公历：${pad(input.year, 4)}-${pad(input.month)}-${pad(input.day)} ${pad(input.hour)}:${pad(input.minute)}`);
+  if (solarTime?.timezone) {
+    L.push(`- 时区：输入时间按 ${solarTime.timezone}（${utcStr(solarTime.tzOffsetMinutes ?? 0)}）解释`);
+  }
+  if (residence) {
+    L.push(`- 常居住地：${residenceText(residence)}（命主长期生活地，供人事断参照，不参与排盘）`);
+  }
   if (solarTime?.applied) {
     L.push(`- 真太阳时：已按 ${solarTime.place}（东经 ${solarTime.longitude}°）校正 ${solarTime.offsetMinutes! >= 0 ? '+' : ''}${solarTime.offsetMinutes} 分钟，上行公历为校正后时间`);
   }
@@ -377,6 +426,20 @@ export function toMarkdown(payload: ExportPayload): string {
   L.push(`- 太岁禽星：${r.yearChin} · 廿八宿起 ${r.startXiu}`);
   L.push(`- 值年卦 ${r.yearGua} · 值日卦 ${r.dayGua} · 值时卦 ${r.hourGua}`);
   L.push('');
+
+  if (liuTimelines) {
+    L.push('## 流卦運（五計多期）');
+    L.push('');
+    L.push('首期即起局时刻，上游 hex_timeline 推法直出：');
+    L.push('');
+    for (const [scale, rows] of Object.entries(liuTimelines)) {
+      const line = rows
+        .map((x) => `${x.label}${x.sub ? `(${x.sub})` : ''} ${x.卦}${x.爻名}`)
+        .join(' → ');
+      L.push(`- **${scale}**：${line}`);
+    }
+    L.push('');
+  }
 
   if (historyExamples?.length) {
     L.push('## 局數史例對照');

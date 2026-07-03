@@ -19,6 +19,35 @@ describe('导出', () => {
     expect(parsed.mingfa.lifeAccum).toBe(mingfa.lifeAccum);
   });
 
+  it('时区/常居住地/流卦運并入导出（meta+JSON+ctx+markdown）', () => {
+    const liuTimelines = {
+      流年: [{ label: '2026', sub: '', 時刻: [2026, 7, 3, 14, 30], 卦: '乾', 卦符: '䷀', 卦數: 1, 爻: 1, 爻名: '初九' }],
+      流月: [], 流日: [], 流時: [], 流分: [],
+    };
+    const payload = {
+      result,
+      solarTime: { applied: false, timezone: 'Asia/Tokyo', tzOffsetMinutes: 540 },
+      residence: { province: '广东', city: '潮州', district: '湘桥区', longitude: 116.63 },
+      liuTimelines,
+    };
+    const meta = buildMeta(payload);
+    expect(meta.时区).toContain('Asia/Tokyo');
+    expect(meta.时区).toContain('UTC+9');
+    expect(meta.常居住地).toContain('潮州');
+    expect(meta.启用模块).toContain('流卦運多期（流年/月/日/時/分）');
+    const parsed = JSON.parse(toJSONText(payload));
+    expect(parsed.residence.city).toBe('潮州');
+    expect(parsed.liuTimelines.流年[0].卦).toBe('乾');
+    expect(parsed.solarTime.timezone).toBe('Asia/Tokyo');
+    const ctx = buildAnalysisContext(payload) as Record<string, string>;
+    expect(ctx.常居住地).toContain('潮州');
+    expect(ctx.流卦運要).toContain('流年：2026乾初九');
+    const md = toMarkdown(payload);
+    expect(md).toContain('常居住地：广东·潮州·湘桥区');
+    expect(md).toContain('## 流卦運（五計多期）');
+    expect(md).toContain('输入时间按 Asia/Tokyo（UTC+9）解释');
+  });
+
   it('kintaiyiPan 全解释盘并入 JSON 导出与 meta 模块', () => {
     const kintaiyiPan = { 釋格局: { 掩: '太乙掩击之释文' }, 卷十二: { 統運入卦: {} } };
     const parsed = JSON.parse(toJSONText({ result, kintaiyiPan }));
@@ -63,7 +92,7 @@ describe('导出', () => {
     expect(meta.太乙积年流派).toContain('10,153,917');
     expect(meta.皇极岁卦流派).toContain('黄畿');
     expect(meta.皇极岁卦流派).toContain('已校订原文');
-    expect(meta.启用模块).toContain('皇极经世历');
+    expect(meta.启用模块).toContain('皇极经世历（元会运世卦历）');
     expect(meta.流派声明).toContain('不可混用');
   });
 
@@ -133,8 +162,8 @@ describe('仅皇极模式导出（太乙范围外）', () => {
   });
 });
 
-describe('真太阳时（校正量 = 经度×4 − 本地时区偏移）', () => {
-  it('北京时区（UTC+8）选乌鲁木齐 ≈ -130 分钟（旧口径回归）', () => {
+describe('真太阳时（校正量 = 经度×4 − 解释时区偏移；城市模式恒 UTC+8）', () => {
+  it('城市模式：选乌鲁木齐（UTC+8 解释）≈ -130 分钟', () => {
     const lng = findLongitude('新疆', '乌鲁木齐', '市区')!;
     const adjusted = applyTrueSolarTime(2026, 7, 3, 12, 25, lng, 480);
     expect(adjusted.offsetMinutes).toBe(Math.round(lng * 4 - 480));
@@ -143,7 +172,15 @@ describe('真太阳时（校正量 = 经度×4 − 本地时区偏移）', () =>
     expect(adjusted.minute).toBe(15);
   });
 
-  it('东京时区（UTC+9）选北京 ≈ -74 分钟（时区差 -60 + 经度差 -14）', () => {
+  it('城市模式：东京操作选潮州湘桥 6:10（视为北京时间）→ -13 分钟 → 5:57', () => {
+    const lng = findLongitude('广东', '潮州', '湘桥区')!;
+    const adjusted = applyTrueSolarTime(2026, 7, 4, 6, 10, lng, 480);
+    expect(adjusted.offsetMinutes).toBe(Math.round(lng * 4 - 480));
+    expect(adjusted.hour).toBe(5);
+    expect([56, 57]).toContain(adjusted.minute); // 经度表精度容差 ±1 分钟
+  });
+
+  it('纯函数数学口径：经度 116.41 × tz540 → -74 分钟（自动模式跨区等价式）', () => {
     const lng = findLongitude('北京', '北京', '市区')!; // 116.41
     const adjusted = applyTrueSolarTime(2026, 7, 3, 19, 12, lng, 540);
     expect(adjusted.offsetMinutes).toBe(-74);
@@ -151,7 +188,7 @@ describe('真太阳时（校正量 = 经度×4 − 本地时区偏移）', () =>
     expect(adjusted.minute).toBe(58);
   });
 
-  it('东京时区选东京（当前时区自动模式的等效）≈ +19 分钟', () => {
+  it('自动模式：东京时区在东京 ≈ +19 分钟', () => {
     const adjusted = applyTrueSolarTime(2026, 7, 3, 19, 12, 139.69, 540);
     expect(adjusted.offsetMinutes).toBe(19);
     expect(adjusted.hour).toBe(19);

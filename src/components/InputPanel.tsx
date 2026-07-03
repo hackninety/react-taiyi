@@ -7,6 +7,14 @@ import { PROVINCES } from '../lib/cities';
 
 const clampInt = (v: number, min: number, max: number) => Math.min(max, Math.max(min, Math.trunc(v)));
 
+/** 常居住地（不参与推算，仅随 AI 导出提供地域参照） */
+export interface ResidenceSetting {
+  enabled: boolean;
+  province: string;
+  city: string;
+  district: string;
+}
+
 export interface SolarTimeSetting {
   enabled: boolean;
   /** 定位模式：当前时区（自动）或手动选择城市 */
@@ -32,6 +40,8 @@ interface Props {
   onSolarChange: (s: SolarTimeSetting) => void;
   /** 校正说明文本（生效时显示） */
   solarHint?: string | null;
+  residence: ResidenceSetting;
+  onResidenceChange: (r: ResidenceSetting) => void;
 }
 
 export function InputPanel({
@@ -39,7 +49,7 @@ export function InputPanel({
   showMingfa, onShowMingfaChange,
   showTenjing, onShowTenjingChange, tenjingLoading,
   showHuangji, onShowHuangjiChange,
-  solar, onSolarChange, solarHint,
+  solar, onSolarChange, solarHint, residence, onResidenceChange,
 }: Props) {
   const set = (patch: Partial<TaiyiInput>) => onChange({ ...value, ...patch });
 
@@ -64,6 +74,28 @@ export function InputPanel({
   const changeCity = (name: string) => {
     const c = currentProvince?.cities.find((x) => x.name === name);
     onSolarChange({ ...solar, city: name, district: c?.districts[0]?.name ?? '' });
+  };
+
+  // 常居住地级联
+  const resProvince = PROVINCES.find((p) => p.name === residence.province);
+  const resCityList = resProvince?.cities ?? [];
+  const resCity = resCityList.find((c) => c.name === residence.city);
+  const resDistrictList = resCity?.districts ?? [];
+
+  const changeResProvince = (name: string) => {
+    const p = PROVINCES.find((x) => x.name === name);
+    const firstCity = p?.cities[0];
+    onResidenceChange({
+      ...residence,
+      province: name,
+      city: firstCity?.name ?? '',
+      district: firstCity?.districts[0]?.name ?? '',
+    });
+  };
+
+  const changeResCity = (name: string) => {
+    const c = resProvince?.cities.find((x) => x.name === name);
+    onResidenceChange({ ...residence, city: name, district: c?.districts[0]?.name ?? '' });
   };
 
   return (
@@ -267,6 +299,39 @@ export function InputPanel({
           </>
         ) : (
           <span className="solar-hint dim">不校正（按浏览器本地时间起局）</span>
+        )}
+      </div>
+
+      {/* 常居住地：不参与推算，随导出提供给 AI 作命盘人事断的地域参照 */}
+      <div className="solar-row">
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={residence.enabled}
+            onChange={(ev) => onResidenceChange({ ...residence, enabled: ev.target.checked })}
+          />
+          常居住地（供 AI 命盘参考）
+        </label>
+        {residence.enabled ? (
+          <>
+            <select aria-label="常居省份" value={residence.province} onChange={(ev) => changeResProvince(ev.target.value)}>
+              {PROVINCES.map((p) => (
+                <option key={p.name} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+            <select aria-label="常居城市" value={residence.city} onChange={(ev) => changeResCity(ev.target.value)}>
+              {resCityList.map((c) => (
+                <option key={c.name} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+            <select aria-label="常居区县" value={residence.district} onChange={(ev) => onResidenceChange({ ...residence, district: ev.target.value })}>
+              {resDistrictList.map((d) => (
+                <option key={d.name} value={d.name}>{d.name}</option>
+              ))}
+            </select>
+          </>
+        ) : (
+          <span className="solar-hint dim">未设置（仅影响 AI 导出内容，不影响盘面）</span>
         )}
       </div>
     </section>
