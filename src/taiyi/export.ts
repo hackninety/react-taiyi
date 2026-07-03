@@ -50,9 +50,13 @@ function huangjiSummary(huangji: HuangjiInfo): string {
 function solarText(solarTime?: SolarTimeInfo | null): string {
   if (solarTime?.applied) {
     const sign = solarTime.offsetMinutes! >= 0 ? '+' : '';
-    return `已按 ${solarTime.place}（东经 ${solarTime.longitude}°）校正 ${sign}${solarTime.offsetMinutes} 分钟起局`;
+    const tzMin = solarTime.tzOffsetMinutes ?? 0;
+    const tzSign = tzMin >= 0 ? '+' : '-';
+    const tzAbs = Math.abs(tzMin);
+    const tzStr = `UTC${tzSign}${Math.floor(tzAbs / 60)}${tzAbs % 60 ? `:${String(tzAbs % 60).padStart(2, '0')}` : ''}`;
+    return `输入时间按浏览器时区 ${solarTime.timezone ?? ''}（${tzStr}）解释，已按 ${solarTime.place}（经度 ${solarTime.longitude}°）校正 ${sign}${solarTime.offsetMinutes} 分钟起局`;
   }
-  return '未校正（按北京时间 UTC+8 起局）';
+  return '未校正（按浏览器本地时间起局）';
 }
 
 /** 口径明细结构（两种模式字段并集，未涉及的项为空） */
@@ -60,6 +64,7 @@ export interface ExportMeta {
   应用: string;
   太乙计式?: string;
   太乙积年流派?: string;
+  历法口径?: string;
   真太阳时?: string;
   /** 仅皇极模式：太乙未出盘的说明 */
   太乙主盘?: string;
@@ -84,6 +89,9 @@ export function buildMeta({ result: r, mingfa, planets, solarTime, huangji }: Ex
       ? {
         太乙计式: r.jiName,
         太乙积年流派: `${r.methodName}（积年常数 ${ACUM_CONST[r.input.acumYear].toLocaleString('en-US')}）`,
+        历法口径: r.calendarMode === '皇极拟推'
+          ? '皇极拟推——四柱按纯干支算术＋天文节气推得（拟推格里历），农历为节气月建拟推，属现代拟推、非古历考据，不在黄金用例验证范围内'
+          : '标准——lunar-typescript 历法，公元 600–9999 经黄金用例对照验证',
         真太阳时: solarText(solarTime),
       }
       : {
@@ -260,6 +268,7 @@ export function toMarkdown(payload: ExportPayload): string {
   L.push('|---|---|');
   L.push(`| 太乙计式 | ${meta.太乙计式} |`);
   L.push(`| 太乙积年流派 | ${meta.太乙积年流派} |`);
+  L.push(`| 历法口径 | ${meta.历法口径} |`);
   L.push(`| 真太阳时 | ${meta.真太阳时} |`);
   if (huangji) L.push(`| 皇极岁卦流派 | ${huangji.school}派 · ${schoolTag(huangji.school)} |`);
   L.push(`| 启用模块 | ${meta.启用模块.join('、')} |`);

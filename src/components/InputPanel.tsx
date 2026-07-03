@@ -9,6 +9,8 @@ const clampInt = (v: number, min: number, max: number) => Math.min(max, Math.max
 
 export interface SolarTimeSetting {
   enabled: boolean;
+  /** 定位模式：当前时区（自动）或手动选择城市 */
+  mode: 'auto' | 'city';
   province: string;
   city: string;
   district: string;
@@ -255,25 +257,37 @@ export function InputPanel({
         </label>
         {solar.enabled ? (
           <>
-            <select aria-label="省份" value={solar.province} onChange={(ev) => changeProvince(ev.target.value)}>
-              {PROVINCES.map((p) => (
-                <option key={p.name} value={p.name}>{p.name}</option>
-              ))}
+            <select
+              aria-label="定位方式"
+              value={solar.mode}
+              onChange={(ev) => onSolarChange({ ...solar, mode: ev.target.value as 'auto' | 'city' })}
+            >
+              <option value="auto">当前时区（自动）</option>
+              <option value="city">选择城市（中国）</option>
             </select>
-            <select aria-label="城市" value={solar.city} onChange={(ev) => changeCity(ev.target.value)}>
-              {cityList.map((c) => (
-                <option key={c.name} value={c.name}>{c.name}</option>
-              ))}
-            </select>
-            <select aria-label="区县" value={solar.district} onChange={(ev) => onSolarChange({ ...solar, district: ev.target.value })}>
-              {districtList.map((d) => (
-                <option key={d.name} value={d.name}>{d.name}</option>
-              ))}
-            </select>
+            {solar.mode === 'city' && (
+              <>
+                <select aria-label="省份" value={solar.province} onChange={(ev) => changeProvince(ev.target.value)}>
+                  {PROVINCES.map((p) => (
+                    <option key={p.name} value={p.name}>{p.name}</option>
+                  ))}
+                </select>
+                <select aria-label="城市" value={solar.city} onChange={(ev) => changeCity(ev.target.value)}>
+                  {cityList.map((c) => (
+                    <option key={c.name} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+                <select aria-label="区县" value={solar.district} onChange={(ev) => onSolarChange({ ...solar, district: ev.target.value })}>
+                  {districtList.map((d) => (
+                    <option key={d.name} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
+              </>
+            )}
             {solarHint && <span className="solar-hint">{solarHint}</span>}
           </>
         ) : (
-          <span className="solar-hint dim">不校正（北京时间 UTC+8）</span>
+          <span className="solar-hint dim">不校正（按浏览器本地时间起局）</span>
         )}
       </div>
     </section>

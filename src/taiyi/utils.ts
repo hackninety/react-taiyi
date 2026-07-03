@@ -10,9 +10,10 @@ export function rotate<T>(list: readonly T[], o: T): T[] {
   return [...list.slice(i), ...list.slice(0, i)];
 }
 
-/** Python 的 `x % n or n`：余数为 0 时取 n（一至 n 循环计数） */
+/** Python 的 `x % n or n`：余数为 0 时取 n（一至 n 循环计数）。
+ * 与 Python 一致对负数取正余（皇极全跨度的公元前年份会出现负输入）。 */
 export function modOr(x: number, n: number): number {
-  const r = x % n;
+  const r = ((x % n) + n) % n;
   return r === 0 ? n : r;
 }
 

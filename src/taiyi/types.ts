@@ -45,6 +45,8 @@ export interface TaiyiResult {
   input: TaiyiInput;
   jiName: string;          // 年计/月计/日计/时计/分计
   methodName: string;      // 太乙统宗/太乙金镜/太乙淘金歌/太乙局
+  /** 历法口径：标准（lunar-typescript，600–9999 黄金验证）或 皇极拟推（全跨度） */
+  calendarMode: '标准' | '皇极拟推';
   /** [年柱, 月柱, 日柱, 时柱, 分柱] */
   ganzhi: string[];
   lunar: { year: number; month: number; day: number; text: string };

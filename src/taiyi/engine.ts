@@ -13,6 +13,7 @@ import {
   JI_NAME, METHOD_NAME, toCn, FIVE_YUAN_HEADS, jiaziRing72,
 } from './constants';
 import { gangzhi, lunarDate, currentJieqi, daysBetween } from './calendar';
+import { hjGangzhi, hjLunar, hjJieqi, hjDaysBetween } from './huangjiCalendar';
 import { rotate, modOr, mod, divide, byIndex1, byCycle1, JIAZI } from './utils';
 import type { AcumYear, Dun, GongName, JiStyle, KookInfo, SuanInfo, TaiyiInput, TaiyiResult } from './types';
 
@@ -35,6 +36,9 @@ function jiaziIndex1(gz: string): number {
   return i < 0 ? 1 : i + 1;
 }
 
+/** 历法口径：standard = lunar-typescript（600–9999 黄金验证）；huangji = 皇极拟推（全跨度） */
+export type CalendarMode = 'standard' | 'huangji';
+
 export class TaiyiEngine {
   private cache = new Map<string, unknown>();
 
@@ -44,6 +48,7 @@ export class TaiyiEngine {
     readonly day: number,
     readonly hour: number,
     readonly minute: number,
+    readonly calendarMode: CalendarMode = 'standard',
   ) {}
 
   private memo<T>(key: string, fn: () => T): T {
@@ -54,15 +59,28 @@ export class TaiyiEngine {
   }
 
   gangzhi(): string[] {
-    return this.memo('gz', () => gangzhi(this.year, this.month, this.day, this.hour, this.minute));
+    return this.memo('gz', () => (this.calendarMode === 'huangji'
+      ? hjGangzhi(this.year, this.month, this.day, this.hour, this.minute)
+      : gangzhi(this.year, this.month, this.day, this.hour, this.minute)));
   }
 
   lunar() {
-    return this.memo('lunar', () => lunarDate(this.year, this.month, this.day));
+    return this.memo('lunar', () => (this.calendarMode === 'huangji'
+      ? hjLunar(this.year, this.month, this.day)
+      : lunarDate(this.year, this.month, this.day)));
   }
 
   jieqi(): string {
-    return this.memo('jq', () => currentJieqi(this.year, this.month, this.day, this.hour, this.minute));
+    return this.memo('jq', () => (this.calendarMode === 'huangji'
+      ? hjJieqi(this.year, this.month, this.day)
+      : currentJieqi(this.year, this.month, this.day, this.hour, this.minute)));
+  }
+
+  /** 积日差（随历法口径切换日期解释：标准=儒略/格里衔接，拟推=纯格里历） */
+  private daysBetween(hour: number, minute: number, refYear: number, refMonth: number, refDay: number): number {
+    return this.calendarMode === 'huangji'
+      ? hjDaysBetween(this.year, this.month, this.day, hour, minute, refYear, refMonth, refDay)
+      : daysBetween(this.year, this.month, this.day, hour, minute, refYear, refMonth, refDay);
   }
 
   /** 积数（kintaiyi accnum） */
@@ -80,7 +98,7 @@ export class TaiyiEngine {
         return accYear * 12 + 2 + lunar.month;
       }
       if (jiStyle === 2) {
-        const diff = daysBetween(this.year, this.month, this.day, this.hour, 0, 1900, 6, 19);
+        const diff = this.daysBetween(this.hour, 0, 1900, 6, 19);
         const configNum = 708011105 - acumYear - [185, 184, 183, 182][acumYear];
         const base = acumYear !== 3
           ? configNum + diff
@@ -94,7 +112,7 @@ export class TaiyiEngine {
         return base;
       }
       if (jiStyle === 3) {
-        const diff = daysBetween(this.year, this.month, this.day, this.hour, 0, 1900, 12, 21);
+        const diff = this.daysBetween(this.hour, 0, 1900, 12, 21);
         const configNum = 708011105 - [0, 10153917, 10153917, 0][acumYear];
         const accDay = configNum + diff;
         let result = (accDay - 1) * 12 + Math.floor((this.hour + 1) / 2) + (acumYear !== 1 ? 1 : -11);
@@ -111,7 +129,7 @@ export class TaiyiEngine {
         return result;
       }
       // jiStyle === 4 分计
-      const diff = daysBetween(this.year, this.month, this.day, this.hour, this.minute, 1900, 12, 21);
+      const diff = this.daysBetween(this.hour, this.minute, 1900, 12, 21);
       const configNum = 708011105 - [0, 10153917, 10153917, 0][acumYear];
       const accDay = configNum + diff;
       const base = (accDay - 1) * 23 + this.hour * 10500 + this.minute + 1;
@@ -396,32 +414,32 @@ export class TaiyiEngine {
 
   /** 飞符 */
   flyFu(jiStyle: JiStyle, acumYear: AcumYear): string {
-    const fly = Math.trunc((this.accNum(jiStyle, acumYear) % 360 % 36) / 3);
+    const fly = Math.trunc((mod(this.accNum(jiStyle, acumYear), 360) % 36) / 3);
     return byIndex1(rotate(DI_ZHI, '辰'), fly) ?? '中';
   }
 
   // —— 以积数起例的诸神（kintaiyi config 系列函数；返回 undefined 表示不上盘） ——
 
   wuxingGod(acc: number): string | undefined {
-    const f = acc % 5;
+    const f = mod(acc, 5);
     if (f === 0) {
       const fv = divide(acc, 5);
-      return byIndex1(SIXTEEN, fv % 5);
+      return byIndex1(SIXTEEN, mod(fv, 5));
     }
     return byIndex1([...'乾子艮巽坤'], f);
   }
 
   kingFu(acc: number): string | undefined {
-    let n = acc % 20;
-    if (n === 0) n = divide(acc, 20) % 20;
+    let n = mod(acc, 20);
+    if (n === 0) n = mod(divide(acc, 20), 20);
     if (n > 16) n -= 16;
     return byIndex1(rotate(SIXTEEN, '戌'), n);
   }
 
   tianWang(acc: number): string | undefined {
-    const tw = acc % 20;
+    const tw = mod(acc, 20);
     if (tw === 0) {
-      let v = divide(acc, 20) % 20;
+      let v = mod(divide(acc, 20), 20);
       if (v > 16) v -= 16;
       return byIndex1(SIXTEEN, v);
     }
@@ -429,9 +447,9 @@ export class TaiyiEngine {
   }
 
   tianShi(acc: number): string | undefined {
-    const tw = acc % 12;
+    const tw = mod(acc, 12);
     if (tw === 0) {
-      let v = divide(acc, 12) % 12;
+      let v = mod(divide(acc, 12), 12);
       if (v > 16) v -= 16;
       return byIndex1(SIXTEEN, v);
     }
@@ -439,9 +457,9 @@ export class TaiyiEngine {
   }
 
   taiJun(acc: number): string | undefined {
-    const f = acc % 4;
+    const f = mod(acc, 4);
     if (f === 0) {
-      let v = divide(acc, 4) % 4;
+      let v = mod(divide(acc, 4), 4);
       if (v > 16) v -= 16;
       return byIndex1(SIXTEEN, v);
     }
@@ -455,27 +473,27 @@ export class TaiyiEngine {
   }
 
   flyBird(acc: number): number | undefined {
-    const f = acc % 8;
+    const f = mod(acc, 8);
     if (f === 0) return undefined; // 源实现返回「坤」字符串，入盘时被丢弃
     return byIndex1([1, 8, 3, 4, 9, 2, 7, 6], f);
   }
 
   threeWind(acc: number): number | undefined {
-    const f = acc % 9;
-    if (f === 0) return divide(acc, 9) % 9;
+    const f = mod(acc, 9);
+    if (f === 0) return mod(divide(acc, 9), 9);
     return byIndex1([7, 2, 6, 1, 3, 9, 4, 8], f % 9 === 0 ? Math.trunc(f / 9) : f % 9);
   }
 
   fiveWind(acc: number): number | undefined {
-    const f = acc % 29;
-    if (f === 0) return divide(acc, 29) % 29;
+    const f = mod(acc, 29);
+    if (f === 0) return mod(divide(acc, 29), 29);
     if (f % 9 === 0) return byIndex1([1, 3, 5, 7, 9, 2, 4, 6, 8], Math.trunc(f / 9));
     return byIndex1([1, 3, 5, 7, 9, 2, 4, 6, 8], f % 9);
   }
 
   eightWind(acc: number): number | undefined {
-    const f = acc % 9;
-    if (f === 0) return divide(acc, 9) % 9;
+    const f = mod(acc, 9);
+    if (f === 0) return mod(divide(acc, 9), 9);
     return byIndex1([2, 3, 4, 6, 7, 8, 9, 1], f);
   }
 
@@ -487,7 +505,7 @@ export class TaiyiEngine {
   }
 
   smallYo(acc: number): number | undefined {
-    const smallYo = acc % 360;
+    const smallYo = mod(acc, 360);
     const table = new Map<number, number>([[1, 1], [2, 2], [3, 3], [4, 4], [6, 5], [7, 6], [8, 7], [9, 8]]);
     let sm = 0;
     if (smallYo < 24) {
@@ -520,7 +538,7 @@ export class TaiyiEngine {
 
   /** 值事门（源实现：积数 %240，为 0 时取 120，每三十为一门） */
   zhishiDoor(acc: number): string {
-    const acc240 = acc % 240 === 0 ? 120 : acc % 240;
+    const acc240 = mod(acc, 240) === 0 ? 120 : mod(acc, 240);
     let zhishi = Math.floor(acc240 / 30);
     if (zhishi % 30 !== 0) zhishi += 1;
     else if (zhishi === 0) zhishi = 1;
@@ -539,7 +557,7 @@ export class TaiyiEngine {
       return out;
     }
     const half = YANG_DUN_JIEQI.has(this.jieqi()) ? '冬至' : '夏至';
-    let num = half === '夏至' ? acc % 120 % 30 : acc % 240 % 30;
+    let num = half === '夏至' ? mod(acc, 120) % 30 : mod(acc, 240) % 30;
     if (num > 8) num %= 8;
     if (num === 0) num = 8;
     const start = ring[num - 1];
@@ -622,9 +640,10 @@ export class TaiyiEngine {
   /** 纪（kintaiyi getepoch） */
   epoch(jiStyle: JiStyle, acumYear: AcumYear): { yuan?: string; ji: string } {
     const acc = this.accNum(jiStyle, acumYear);
+    const a360 = mod(acc, 360);
     if (jiStyle === 0 || jiStyle === 1 || jiStyle === 2) {
-      let jiNum = acc % 360 === 1 ? 1 : Math.trunc(Math.floor(acc % 360 / 60)) + 1;
-      let jiNum2 = Math.trunc((acc % 360 % 72 % 24) / 3) || 1;
+      let jiNum = a360 === 1 ? 1 : Math.trunc(Math.floor(a360 / 60)) + 1;
+      let jiNum2 = Math.trunc((a360 % 72 % 24) / 3) || 1;
       if (jiNum2 > 6) jiNum2 -= 6;
       if (jiNum > 6) jiNum -= 6;
       return { yuan: CNUM[jiNum2 - 1], ji: CNUM[jiNum - 1] };
@@ -638,8 +657,8 @@ export class TaiyiEngine {
 
   /** 元（kintaiyi getyuan） */
   yuanHead(jiStyle: JiStyle, acumYear: AcumYear): string {
-    const acc = this.accNum(jiStyle, acumYear);
-    const find = pyRound(acc % 360) === 1 ? 1 : Math.trunc(pyRound((acc % 360) / 72));
+    const a360 = mod(this.accNum(jiStyle, acumYear), 360);
+    const find = pyRound(a360) === 1 ? 1 : Math.trunc(pyRound(a360 / 72));
     return byIndex1(FIVE_YUAN_HEADS, find || 1) ?? FIVE_YUAN_HEADS[0];
   }
 
@@ -694,7 +713,7 @@ export class TaiyiEngine {
   }
 
   dayGua(acumYear: AcumYear): string {
-    const n = this.accNum(1, acumYear) % 646464 % 20 || 64;
+    const n = mod(this.accNum(1, acumYear), 646464) % 20 || 64;
     return GUA_64[n - 1];
   }
 
@@ -920,10 +939,10 @@ export class TaiyiEngine {
   }
 }
 
-/** 主入口：一次排盘 */
-export function calculateTaiyi(input: TaiyiInput): TaiyiResult {
+/** 主入口：一次排盘。calendarMode='huangji' 时用皇极拟推历法（全跨度，须标注口径） */
+export function calculateTaiyi(input: TaiyiInput, calendarMode: CalendarMode = 'standard'): TaiyiResult {
   const { year, month, day, hour, minute, jiStyle, acumYear } = input;
-  const e = new TaiyiEngine(year, month, day, hour, minute);
+  const e = new TaiyiEngine(year, month, day, hour, minute, calendarMode);
 
   const kook = e.kook(jiStyle, acumYear);
   const homeSuanValue = e.homeCal(jiStyle, acumYear);
@@ -937,6 +956,7 @@ export function calculateTaiyi(input: TaiyiInput): TaiyiResult {
     input,
     jiName: JI_NAME[jiStyle],
     methodName: METHOD_NAME[acumYear],
+    calendarMode: calendarMode === 'huangji' ? '皇极拟推' : '标准',
     ganzhi: e.gangzhi(),
     lunar: e.lunar(),
     jieqi: e.jieqi(),

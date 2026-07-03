@@ -123,17 +123,33 @@ describe('仅皇极模式导出（太乙范围外）', () => {
   });
 });
 
-describe('真太阳时', () => {
-  it('经度每度校正 4 分钟（乌鲁木齐约 -130 分钟）', () => {
+describe('真太阳时（校正量 = 经度×4 − 本地时区偏移）', () => {
+  it('北京时区（UTC+8）选乌鲁木齐 ≈ -130 分钟（旧口径回归）', () => {
     const lng = findLongitude('新疆', '乌鲁木齐', '市区')!;
-    const adjusted = applyTrueSolarTime(2026, 7, 3, 12, 25, lng);
+    const adjusted = applyTrueSolarTime(2026, 7, 3, 12, 25, lng, 480);
+    expect(adjusted.offsetMinutes).toBe(Math.round(lng * 4 - 480));
     expect(adjusted.offsetMinutes).toBe(Math.round((lng - 120) * 4));
     expect(adjusted.hour).toBe(10);
     expect(adjusted.minute).toBe(15);
   });
 
+  it('东京时区（UTC+9）选北京 ≈ -74 分钟（时区差 -60 + 经度差 -14）', () => {
+    const lng = findLongitude('北京', '北京', '市区')!; // 116.41
+    const adjusted = applyTrueSolarTime(2026, 7, 3, 19, 12, lng, 540);
+    expect(adjusted.offsetMinutes).toBe(-74);
+    expect(adjusted.hour).toBe(17);
+    expect(adjusted.minute).toBe(58);
+  });
+
+  it('东京时区选东京（当前时区自动模式的等效）≈ +19 分钟', () => {
+    const adjusted = applyTrueSolarTime(2026, 7, 3, 19, 12, 139.69, 540);
+    expect(adjusted.offsetMinutes).toBe(19);
+    expect(adjusted.hour).toBe(19);
+    expect(adjusted.minute).toBe(31);
+  });
+
   it('跨日回退', () => {
-    const adjusted = applyTrueSolarTime(2026, 7, 1, 0, 30, 87.62);
+    const adjusted = applyTrueSolarTime(2026, 7, 1, 0, 30, 87.62, 480);
     expect(adjusted.day).toBe(30);
     expect(adjusted.month).toBe(6);
     expect(adjusted.hour).toBe(22);

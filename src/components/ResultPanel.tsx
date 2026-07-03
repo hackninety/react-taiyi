@@ -25,9 +25,15 @@ export function ResultPanel({ result, solarInfo }: Props) {
       <section className="card">
         <h3>局式</h3>
         <Row label="太乙计">{r.jiName} · {r.methodName}</Row>
+        {r.calendarMode === '皇极拟推' && (
+          <Row label="历法口径">
+            <span className="cal-warn">皇极拟推（四柱纯算术＋天文节气，农历为节气月建拟推，非古历考据）</span>
+          </Row>
+        )}
         {solarInfo?.applied && (
           <Row label="真太阳时">
-            {solarInfo.place}（东经 {solarInfo.longitude}°）校正 {solarInfo.offsetMinutes! >= 0 ? '+' : ''}{solarInfo.offsetMinutes} 分钟
+            {solarInfo.timezone ? `浏览器时区 ${solarInfo.timezone} · ` : ''}
+            {solarInfo.place}（经度 {solarInfo.longitude}°）校正 {solarInfo.offsetMinutes! >= 0 ? '+' : ''}{solarInfo.offsetMinutes} 分钟
           </Row>
         )}
         <Row label="四柱">
