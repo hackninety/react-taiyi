@@ -10,6 +10,7 @@ import { Board } from './components/Board';
 import { ResultPanel } from './components/ResultPanel';
 import { MingfaPanel } from './components/MingfaPanel';
 import { ExportCard } from './components/ExportCard';
+import { GuidePage } from './components/GuidePage';
 import { ToastProvider } from './components/Toast';
 
 function defaultInput(): TaiyiInput {
@@ -26,6 +27,7 @@ function defaultInput(): TaiyiInput {
 }
 
 export default function App() {
+  const [view, setView] = useState<'pan' | 'guide'>('pan');
   const [input, setInput] = useState<TaiyiInput>(defaultInput);
   const [sex, setSex] = useState<Sex>('男');
   const [showMingfa, setShowMingfa] = useState(false);
@@ -110,8 +112,27 @@ export default function App() {
           <p className="subtitle">
             三式之首 · 年月日时分五计式 · 算法汇集自开源项目 kintaiyi / taiyipython
           </p>
+          <nav className="view-tabs">
+            <button
+              type="button"
+              className={view === 'pan' ? 'active' : ''}
+              onClick={() => { setView('pan'); window.scrollTo(0, 0); }}
+            >
+              ☰ 排盘
+            </button>
+            <button
+              type="button"
+              className={view === 'guide' ? 'active' : ''}
+              onClick={() => { setView('guide'); window.scrollTo(0, 0); }}
+            >
+              ✎ 使用说明
+            </button>
+          </nav>
         </header>
 
+        {view === 'guide' && <GuidePage />}
+
+        <div style={{ display: view === 'pan' ? 'contents' : 'none' }}>
         <InputPanel
           value={input}
           onChange={setInput}
@@ -142,6 +163,7 @@ export default function App() {
             <ExportCard payload={{ result, mingfa, planets, solarTime: solarInfo }} />
           </>
         )}
+        </div>
 
         <footer className="app-footer">
           算法参照 <a href="https://github.com/kentang2017/kintaiyi" target="_blank" rel="noreferrer">kentang2017/kintaiyi</a>（MIT）
