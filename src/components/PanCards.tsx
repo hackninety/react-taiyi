@@ -61,9 +61,11 @@ interface Props {
   state: PanState;
   /** 数据源为「仅本地」或后端回退时的说明 */
   unavailableNote?: string | null;
+  /** 分组增强插件（按组标题挂载，渲染于组内容顶部）：統運时间轴/軌運轴/五陣八陣图等 */
+  extras?: Record<string, React.ReactNode>;
 }
 
-export function PanCards({ state, unavailableNote }: Props) {
+export function PanCards({ state, unavailableNote, extras }: Props) {
   return (
     <section className="card pan-wrap">
       <h3>
@@ -87,6 +89,7 @@ export function PanCards({ state, unavailableNote }: Props) {
                   <em>{g.note}</em>
                 </summary>
                 <div className="pan-body">
+                  {extras?.[g.title]}
                   {present.map((k) => (
                     <div key={k} className="pan-item">
                       {(present.length > 1 || k !== g.title) && <h4>{k}</h4>}

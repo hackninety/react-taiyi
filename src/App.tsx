@@ -14,6 +14,8 @@ import type { DataSource } from './taiyi/remote';
 import { fetchPan } from './taiyi/pan';
 import { PanCards } from './components/PanCards';
 import type { PanState } from './components/PanCards';
+import { TongyunExtra, GuiyunExtra, WuzhenExtra } from './components/PanExtras';
+import { DocsView } from './components/DocsPages';
 import { InputPanel } from './components/InputPanel';
 import type { SolarTimeSetting } from './components/InputPanel';
 import { Board } from './components/Board';
@@ -48,8 +50,20 @@ function defaultInput(): TaiyiInput {
   };
 }
 
+type View = 'pan' | 'guide' | 'history' | 'disaster' | 'books' | 'tutorial' | 'updates';
+
+const VIEW_TABS: Array<[View, string]> = [
+  ['pan', '☰ 排盘'],
+  ['guide', '✎ 使用说明'],
+  ['history', '📜 局數史例'],
+  ['disaster', '🔥 災異統計'],
+  ['books', '📚 古籍書目'],
+  ['tutorial', '🚀 看盤要領'],
+  ['updates', '🆕 上游更新'],
+];
+
 export default function App() {
-  const [view, setView] = useState<'pan' | 'guide'>('pan');
+  const [view, setView] = useState<View>('pan');
   const [input, setInput] = useState<TaiyiInput>(defaultInput);
   const [sex, setSex] = useState<Sex>('男');
   const [showMingfa, setShowMingfa] = useState(false);
@@ -232,24 +246,33 @@ export default function App() {
             三式之首 · 年月日时分五计式
           </p>
           <nav className="view-tabs">
-            <button
-              type="button"
-              className={view === 'pan' ? 'active' : ''}
-              onClick={() => { setView('pan'); window.scrollTo(0, 0); }}
-            >
-              ☰ 排盘
-            </button>
-            <button
-              type="button"
-              className={view === 'guide' ? 'active' : ''}
-              onClick={() => { setView('guide'); window.scrollTo(0, 0); }}
-            >
-              ✎ 使用说明
-            </button>
+            {VIEW_TABS.map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                className={view === k ? 'active' : ''}
+                onClick={() => { setView(k); window.scrollTo(0, 0); }}
+              >
+                {label}
+              </button>
+            ))}
           </nav>
         </header>
 
         {view === 'guide' && <GuidePage />}
+        {(view === 'history' || view === 'disaster' || view === 'books' || view === 'tutorial' || view === 'updates') && (
+          <DocsView
+            view={view}
+            apiBase={apiBase}
+            onPickYear={(y) => {
+              setInput({ ...input, year: y });
+              // 史例多在太乙历法范围外（公元前），自动开启皇极全跨度以便直接出盘
+              if (y < TAIYI_MIN_YEAR || y > TAIYI_MAX_YEAR) setShowHuangji(true);
+              setView('pan');
+              window.scrollTo(0, 0);
+            }}
+          />
+        )}
 
         <div style={{ display: view === 'pan' ? 'contents' : 'none' }}>
         <InputPanel
@@ -295,20 +318,20 @@ export default function App() {
 
         {result && (
           <>
+            <div className="board-tabs" role="tablist" aria-label="盘面视图">
+              {([['both', '双盘'], ['square', '方盘'], ['circle', '圆盘']] as const).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={boardView === k ? 'active' : ''}
+                  onClick={() => setBoardView(k)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <main className="content">
               <div className="board-col">
-                <div className="board-tabs" role="tablist" aria-label="盘面视图">
-                  {([['both', '双盘'], ['square', '方盘'], ['circle', '圆盘']] as const).map(([k, label]) => (
-                    <button
-                      key={k}
-                      type="button"
-                      className={boardView === k ? 'active' : ''}
-                      onClick={() => setBoardView(k)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
                 {boardView !== 'circle' && <Board result={result} planets={planets} />}
                 {boardView !== 'square' && <CircularBoard url={circularUrl} note={circularNote} />}
               </div>
@@ -321,6 +344,21 @@ export default function App() {
             {taiyiInRange && (
               <PanCards
                 state={pan}
+                extras={pan.phase === 'ok' ? {
+                  '統運（卷十二）': (
+                    <TongyunExtra
+                      vol12={(pan.data['卷十二'] ?? {}) as Record<string, unknown>}
+                      input={effectiveInput}
+                      apiBase={apiBase}
+                    />
+                  ),
+                  '軌運（卷九）': (
+                    <GuiyunExtra vol9={(pan.data['卷九'] ?? {}) as Record<string, unknown>} />
+                  ),
+                  '軍事': (
+                    <WuzhenExtra junshi={(pan.data['軍事應用'] ?? {}) as Record<string, unknown>} />
+                  ),
+                } : undefined}
                 unavailableNote={
                   dataSource === 'local'
                     ? '「仅本地引擎」模式下不加载——全解釋由 kintaiyi 后端直出，切换数据源后显示。'

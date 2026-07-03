@@ -985,21 +985,21 @@ body {
 .src-diffs tr.known td { color: var(--ink-dim); }
 
 /* ── 方盘/圆盘双渲染 ── */
+/* 盘列不吸顶（用户决定），方盘与右侧结果栏顶部对齐 */
 .board-col {
   display: flex;
   flex-direction: column;
   gap: 12px;
   align-self: start;
-  position: sticky;
-  top: 12px;
 }
 
-/* 盘列自身接管 sticky；内部方盘还原为普通流 */
 .board-col .board { position: static; top: auto; }
 
+/* 盘面视图页签独立成行（位于两栏之上） */
 .board-tabs {
-  display: inline-flex;
+  display: flex;
   gap: 6px;
+  margin: 0 0 10px;
 }
 
 .board-tabs button {
@@ -1043,7 +1043,6 @@ body {
 }
 
 @media (max-width: 980px) {
-  .board-col { position: static; }
   .api-input { flex-basis: 100%; }
 }
 
@@ -1155,3 +1154,162 @@ body {
 @media (max-width: 980px) {
   .pan-groups { grid-template-columns: 1fr; }
 }
+
+/* ── parity 增强：时间轴 / 統運查詢 / 五陣八陣 / 独立文档页 ── */
+.pan-extra { margin: 6px 0 10px; display: flex; flex-direction: column; gap: 10px; }
+
+.tl-caption { font-size: 0.76rem; color: var(--text-dim); margin-bottom: 4px; }
+
+.tl-bar {
+  position: relative;
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 30px;
+}
+
+.tl-seg {
+  flex-basis: 0;
+  min-width: 0;
+  padding: 5px 4px;
+  border-right: 1px dashed rgba(148, 163, 184, 0.18);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(13, 17, 28, 0.5);
+}
+
+.tl-seg span { overflow: hidden; text-overflow: ellipsis; }
+.tl-seg:last-child { border-right: none; }
+
+.tl-seg.active {
+  color: var(--gold-light);
+  background: rgba(212, 175, 55, 0.12);
+  box-shadow: inset 0 0 12px rgba(212, 175, 55, 0.15);
+}
+
+.tl-pin {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--crimson-light);
+  box-shadow: 0 0 8px rgba(220, 20, 60, 0.8);
+}
+
+.tq-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+
+.tq-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.tq-row input {
+  width: 7em;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: inherit;
+  color-scheme: dark;
+}
+
+.tq-row .btn-outline { padding: 7px 18px; }
+.tq-result { border-left: 2px solid rgba(212, 175, 55, 0.5); padding-left: 10px; }
+
+.wz-svg { width: 100%; max-width: 460px; height: auto; display: block; }
+
+/* 独立文档页 */
+.doc-page { margin-top: 4px; animation: fadeInUp 0.4s ease-out both; }
+.doc-page + .doc-page, .doc-page ~ .doc-page { margin-top: 14px; }
+
+.hx-year-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px 2px 10px;
+  scrollbar-width: thin;
+}
+
+.hx-year-strip button {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(13, 17, 28, 0.6);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.hx-year-strip button.active {
+  color: var(--gold-light);
+  border-color: rgba(212, 175, 55, 0.55);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+.hx-example {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(13, 17, 28, 0.55);
+}
+
+.hx-example-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.hx-example-head strong { color: var(--gold-light); font-size: 1rem; }
+.hx-example-head .btn-outline { margin-left: auto; padding: 6px 14px; font-size: 0.8rem; }
+
+.dz-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+
+.dz-chip {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.dz-chip b { color: var(--crimson-light); }
+
+.tut-groups { grid-template-columns: 1fr; }
+
+.upd-list { list-style: none; margin: 0; padding: 0; }
+
+.upd-list li {
+  border-left: 2px solid var(--line-strong);
+  padding: 2px 0 10px 14px;
+  margin-left: 6px;
+  position: relative;
+}
+
+.upd-list li::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.6);
+}
+
+.upd-list strong { color: var(--gold-light); font-size: 0.85rem; }
