@@ -1,10 +1,11 @@
 /**
  * 皇极经世历（邵雍《皇极经世书》元会运世体系）。
  *
- * 算法**直接引用**开源库 yhys-core（github:hackninety/react-yhys）——
- * 上游更新算法后本项目随之更新，不再本地内联。
- * 本文件只做两件事：① 用库函数按元会运世逐层取卦；② 把库返回卦的 binary
- * 映射为本项目统一的繁体卦名与卦符（库的 unicode 字段个别有笔误，故不取用）。
+ * 算法与卦象数据**直接引用**开源库 yhys-core（github:hackninety/react-yhys）——
+ * 上游更新后本项目随之更新，不再本地内联（卦符笔误已于上游 6f8be11 修复，
+ * 本地对照表已删除）。本文件只做两件事：① 用库函数按元会运世逐层取卦；
+ * ② 显示层将库的简体卦名转为繁体（经 GUA_64 以卦符反查），与太乙值卦命名统一；
+ *   反查不中时回退库名，保证上游新增数据也能直通显示。
  *
  * 流派校验状态（依 yhys-core 说明）：
  * - 黄畿：已对照《皇极经世书》黄畿注原文校验（84 个文献锚点），为默认。
@@ -12,6 +13,7 @@
  */
 import {
   SUI_TO_GREGORIAN_OFFSET,
+  getHexagram64,
   getHuiHexagram,
   getYunHexagramDetailByGlobal,
   getShiHexagramByYear,
@@ -41,33 +43,24 @@ export const HUANGJI_SCHOOL_NOTE: Record<HuangjiSchool, string> = {
 
 export const HUANGJI_DEFAULT_SCHOOL: HuangjiSchool = '黄畿';
 
-/**
- * binary(初爻为 bit0) -> 卦符。
- * 与 yhys 同源，但修正其 binary 43（睽）的 Unicode 笔误（䷤→䷥）。
- */
-const BINARY_TO_UNICODE: Record<number, string> = {
-  0: '䷁', 1: '䷗', 2: '䷆', 3: '䷒', 4: '䷎', 5: '䷣', 6: '䷭', 7: '䷊',
-  8: '䷏', 9: '䷲', 10: '䷧', 11: '䷵', 12: '䷽', 13: '䷶', 14: '䷟', 15: '䷡',
-  16: '䷇', 17: '䷂', 18: '䷜', 19: '䷻', 20: '䷦', 21: '䷾', 22: '䷯', 23: '䷄',
-  24: '䷬', 25: '䷐', 26: '䷮', 27: '䷹', 28: '䷞', 29: '䷰', 30: '䷛', 31: '䷪',
-  32: '䷖', 33: '䷚', 34: '䷃', 35: '䷨', 36: '䷳', 37: '䷕', 38: '䷑', 39: '䷙',
-  40: '䷢', 41: '䷔', 42: '䷿', 43: '䷥', 44: '䷷', 45: '䷝', 46: '䷱', 47: '䷍',
-  48: '䷓', 49: '䷩', 50: '䷺', 51: '䷼', 52: '䷴', 53: '䷤', 54: '䷸', 55: '䷈',
-  56: '䷋', 57: '䷘', 58: '䷅', 59: '䷉', 60: '䷠', 61: '䷌', 62: '䷫', 63: '䷀',
-};
-
 /** 卦符 -> 繁体卦名（由本项目 GUA_64「名+符」反查，与太乙值卦命名保持一致） */
-const UNICODE_TO_NAME: Map<string, string> = (() => {
+const UNICODE_TO_TRAD_NAME: Map<string, string> = (() => {
   const m = new Map<string, string>();
   for (const entry of GUA_64) m.set(entry.slice(-1), entry.slice(0, -1));
   return m;
 })();
 
-/** 把 yhys 返回卦（或 binary）本地化为繁体卦名 + 正确卦符 */
+/**
+ * 库卦 -> 本项目卦：binary 与卦符直接取自 yhys-core（getHexagram64），
+ * 仅显示层将简体卦名转繁体；反查不中时回退库名。
+ */
 function toHex(input: number | { binary: number }): Hexagram {
-  const binary = (typeof input === 'number' ? input : input.binary) & 0x3f;
-  const symbol = BINARY_TO_UNICODE[binary];
-  return { binary, name: UNICODE_TO_NAME.get(symbol) ?? '?', symbol };
+  const h = getHexagram64(typeof input === 'number' ? input : input.binary);
+  return {
+    binary: h.binary,
+    name: UNICODE_TO_TRAD_NAME.get(h.unicode) ?? h.name,
+    symbol: h.unicode,
+  };
 }
 
 function ganzhiIndex(gz: string): number {

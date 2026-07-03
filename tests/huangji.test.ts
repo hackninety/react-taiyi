@@ -4,12 +4,25 @@
  * （1984=鼎 … 2026=同人），以及 hexagrams64.ts 午会运卦映射表（运181-210）。
  */
 import { describe, it, expect } from 'vitest';
+import { getHexagram64 } from 'yhys-core';
 import { calculateHuangji } from '../src/taiyi/huangji';
 
 const PILLARS = { monthGz: '甲午', dayGz: '戊寅', hourBranch: '未' };
 
 const hj = (year: number, school: '黄畿' | '祝泌' = '祝泌') =>
   calculateHuangji(year, school, PILLARS);
+
+describe('yhys-core 上游数据守卫', () => {
+  it('卦符表无错位（睽䷥/家人䷤，上游 6f8be11 修复的回归锁）', () => {
+    expect(getHexagram64(43).name).toBe('睽');
+    expect(getHexagram64(43).unicode).toBe('䷥');
+    expect(getHexagram64(53).name).toBe('家人');
+    expect(getHexagram64(53).unicode).toBe('䷤');
+    // 全表卦符唯一性：64 卦不得有重复符号
+    const symbols = new Set(Array.from({ length: 64 }, (_, b) => getHexagram64(b).unicode));
+    expect(symbols.size).toBe(64);
+  });
+});
 
 describe('皇极经世历', () => {
   it('2026 年元会运世定位（午会 · 运192 · 世卦鼎）', () => {
