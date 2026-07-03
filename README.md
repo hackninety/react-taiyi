@@ -29,6 +29,8 @@
 | [wlhyl/taiyipython](https://github.com/wlhyl/taiyipython) | 推导式算法交叉验证（金镜积年、十六神盘循环累加求算、三基/五福起例） |
 | [hhszzzz/taibu](https://github.com/hhszzzz/taibu) | 工程架构参考（domain 分层）；其“太乙”为九星简化视角，未采用 |
 | [dglijin-oss/taiyi-skill](https://github.com/dglijin-oss/taiyi-skill) | 格局解读规则参考 |
+| react-yhys（姊妹项目） | 皇极经世历：元会运世层级、先天六十卦序、黄畿/祝泌两派岁卦算法与验证锚点 |
+| react-8char（姊妹项目） | 真太阳时城市经度表与视觉风格 |
 
 历法（干支 / 节气 / 农历）由 [lunar-typescript](https://github.com/6tail/lunar-typescript) 提供，
 对应 Python 侧 kintaiyi 使用的 sxtwl。
