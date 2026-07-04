@@ -1411,3 +1411,24 @@ body {
 }
 
 .liu-chip.now em::after { content: ' · 今'; color: var(--gold-light); }
+
+/* 常居住地自由输入 */
+.residence-input {
+  flex: 1 1 260px;
+  min-width: 180px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) * 0.7);
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color-scheme: dark;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.residence-input:focus {
+  outline: none;
+  border-color: var(--line-strong);
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.25);
+}

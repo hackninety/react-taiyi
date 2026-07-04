@@ -27,7 +27,7 @@ describe('导出', () => {
     const payload = {
       result,
       solarTime: { applied: false, timezone: 'Asia/Tokyo', tzOffsetMinutes: 540 },
-      residence: { province: '广东', city: '潮州', district: '湘桥区', longitude: 116.63 },
+      residence: { text: '广东潮州湘桥区' },
       liuTimelines,
     };
     const meta = buildMeta(payload);
@@ -36,14 +36,14 @@ describe('导出', () => {
     expect(meta.常居住地).toContain('潮州');
     expect(meta.启用模块).toContain('流卦運多期（流年/月/日/時/分）');
     const parsed = JSON.parse(toJSONText(payload));
-    expect(parsed.residence.city).toBe('潮州');
+    expect(parsed.residence.text).toBe('广东潮州湘桥区');
     expect(parsed.liuTimelines.流年[0].卦).toBe('乾');
     expect(parsed.solarTime.timezone).toBe('Asia/Tokyo');
     const ctx = buildAnalysisContext(payload) as Record<string, string>;
     expect(ctx.常居住地).toContain('潮州');
     expect(ctx.流卦運要).toContain('流年：2026乾初九');
     const md = toMarkdown(payload);
-    expect(md).toContain('常居住地：广东·潮州·湘桥区');
+    expect(md).toContain('常居住地：广东潮州湘桥区');
     expect(md).toContain('## 流卦運（五計多期）');
     expect(md).toContain('输入时间按 Asia/Tokyo（UTC+9）解释');
   });

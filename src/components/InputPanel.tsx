@@ -7,12 +7,10 @@ import { PROVINCES } from '../lib/cities';
 
 const clampInt = (v: number, min: number, max: number) => Math.min(max, Math.max(min, Math.trunc(v)));
 
-/** 常居住地（不参与推算，仅随 AI 导出提供地域参照） */
+/** 常居住地（不参与推算，仅随 AI 导出提供地域参照；自由填写，可为任意地名） */
 export interface ResidenceSetting {
   enabled: boolean;
-  province: string;
-  city: string;
-  district: string;
+  text: string;
 }
 
 export interface SolarTimeSetting {
@@ -76,27 +74,6 @@ export function InputPanel({
     onSolarChange({ ...solar, city: name, district: c?.districts[0]?.name ?? '' });
   };
 
-  // 常居住地级联
-  const resProvince = PROVINCES.find((p) => p.name === residence.province);
-  const resCityList = resProvince?.cities ?? [];
-  const resCity = resCityList.find((c) => c.name === residence.city);
-  const resDistrictList = resCity?.districts ?? [];
-
-  const changeResProvince = (name: string) => {
-    const p = PROVINCES.find((x) => x.name === name);
-    const firstCity = p?.cities[0];
-    onResidenceChange({
-      ...residence,
-      province: name,
-      city: firstCity?.name ?? '',
-      district: firstCity?.districts[0]?.name ?? '',
-    });
-  };
-
-  const changeResCity = (name: string) => {
-    const c = resProvince?.cities.find((x) => x.name === name);
-    onResidenceChange({ ...residence, city: name, district: c?.districts[0]?.name ?? '' });
-  };
 
   return (
     <section className="input-card">
@@ -313,23 +290,15 @@ export function InputPanel({
           常居住地（供 AI 命盘参考）
         </label>
         {residence.enabled ? (
-          <>
-            <select aria-label="常居省份" value={residence.province} onChange={(ev) => changeResProvince(ev.target.value)}>
-              {PROVINCES.map((p) => (
-                <option key={p.name} value={p.name}>{p.name}</option>
-              ))}
-            </select>
-            <select aria-label="常居城市" value={residence.city} onChange={(ev) => changeResCity(ev.target.value)}>
-              {resCityList.map((c) => (
-                <option key={c.name} value={c.name}>{c.name}</option>
-              ))}
-            </select>
-            <select aria-label="常居区县" value={residence.district} onChange={(ev) => onResidenceChange({ ...residence, district: ev.target.value })}>
-              {resDistrictList.map((d) => (
-                <option key={d.name} value={d.name}>{d.name}</option>
-              ))}
-            </select>
-          </>
+          <input
+            className="residence-input"
+            type="text"
+            value={residence.text}
+            placeholder="如：广东省深圳市南山区 / 东京都 / 美国加州湾区"
+            maxLength={60}
+            aria-label="常居住地"
+            onChange={(ev) => onResidenceChange({ ...residence, text: ev.target.value })}
+          />
         ) : (
           <span className="solar-hint dim">未设置（仅影响 AI 导出内容，不影响盘面）</span>
         )}

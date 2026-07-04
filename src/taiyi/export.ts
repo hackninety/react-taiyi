@@ -31,8 +31,8 @@ export interface ExportPayload {
   historyExamples?: Array<{ year: number; kook: string; event: string; source: string }> | null;
   /** 流卦運多期（流年12/流月12/流日15/流時12辰/流分10，上游 hex_timeline 推法直出） */
   liuTimelines?: LiuData | null;
-  /** 常居住地（不参与推算，供 AI 作命盘人事断的地域参照） */
-  residence?: { province: string; city: string; district: string; longitude?: number } | null;
+  /** 常居住地（不参与推算，供 AI 作命盘人事断的地域参照；自由填写文本） */
+  residence?: { text: string } | null;
 }
 
 /** 四流派太乙积年常数（与 engine TN_DICT 一致，导出时注明以防混用） */
@@ -72,9 +72,7 @@ function solarText(solarTime?: SolarTimeInfo | null): string {
   return '未校正（按浏览器本地时间起局）';
 }
 
-const residenceText = (r: NonNullable<ExportPayload['residence']>): string =>
-  `${r.province}·${r.city}${r.district && r.district !== '市区' ? `·${r.district}` : ''}` +
-  (r.longitude !== undefined ? `（经度 ${r.longitude}°）` : '');
+const residenceText = (r: NonNullable<ExportPayload['residence']>): string => r.text;
 
 /** 口径明细结构（两种模式字段并集，未涉及的项为空） */
 export interface ExportMeta {

@@ -93,10 +93,8 @@ export default function App() {
   const [historyMatches, setHistoryMatches] = useState<ExampleRow[]>([]);
   // 流卦運多期（提升到 App：时间轴显示 + 并入 AI 导出）
   const [liu, setLiu] = useState<LiuState>({ phase: 'idle' });
-  // 常居住地（不参与推算，随导出供 AI 作命盘人事断的地域参照）
-  const [residence, setResidence] = useState<ResidenceSetting>({
-    enabled: false, province: '北京', city: '北京', district: '市区',
-  });
+  // 常居住地（不参与推算，随导出供 AI 作命盘人事断的地域参照；自由填写）
+  const [residence, setResidence] = useState<ResidenceSetting>({ enabled: false, text: '' });
   const [boardView, setBoardView] = useState<'both' | 'square' | 'circle'>('both');
   const [solar, setSolar] = useState<SolarTimeSetting>({
     enabled: false,
@@ -522,11 +520,8 @@ export default function App() {
                 kintaiyiPan: pan.phase === 'ok' ? pan.data : null,
                 historyExamples: historyMatches.length ? historyMatches : null,
                 liuTimelines: liu.phase === 'ok' ? liu.liu : null,
-                residence: residence.enabled
-                  ? {
-                    province: residence.province, city: residence.city, district: residence.district,
-                    longitude: findLongitude(residence.province, residence.city, residence.district),
-                  }
+                residence: residence.enabled && residence.text.trim()
+                  ? { text: residence.text.trim() }
                   : null,
               }}
             />
