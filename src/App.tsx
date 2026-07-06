@@ -6,6 +6,7 @@ import {
 } from './taiyi';
 import { loadExamples, matchExamples } from './lib/examples';
 import type { ExampleRow } from './lib/examples';
+import { usePersistentState } from './lib/persist';
 import type { HuangjiInfo, MingfaResult, Sex, SolarTimeInfo, TaiyiInput, TaiyiResult } from './taiyi';
 import { findLongitude } from './lib/cities';
 import {
@@ -70,13 +71,14 @@ const VIEW_TABS: Array<[View, string]> = [
 
 export default function App() {
   const [view, setView] = useState<View>('pan');
-  const [input, setInput] = useState<TaiyiInput>(defaultInput);
-  const [sex, setSex] = useState<Sex>('男');
-  const [showMingfa, setShowMingfa] = useState(false);
-  const [showTenjing, setShowTenjing] = useState(false);
+  // 起局输入项持久化：刷新后恢复上次排盘（派生结果由输入重算，见 lib/persist）
+  const [input, setInput] = usePersistentState<TaiyiInput>('input', defaultInput);
+  const [sex, setSex] = usePersistentState<Sex>('sex', '男');
+  const [showMingfa, setShowMingfa] = usePersistentState('showMingfa', false);
+  const [showTenjing, setShowTenjing] = usePersistentState('showTenjing', false);
   const [tenjingReady, setTenjingReady] = useState(false);
   const [tenjingError, setTenjingError] = useState<string | null>(null);
-  const [showHuangji, setShowHuangji] = useState(false);
+  const [showHuangji, setShowHuangji] = usePersistentState('showHuangji', false);
   // kintaiyi 权威后端（后端优先，不可用自动回退本地并提示）
   const [dataSource, setDataSource] = useState<DataSource>(getDataSource);
   // API 地址只读展示（可经 VITE_TAIYI_API / localStorage 配置，界面不提供编辑）
@@ -94,9 +96,9 @@ export default function App() {
   // 流卦運多期（提升到 App：时间轴显示 + 并入 AI 导出）
   const [liu, setLiu] = useState<LiuState>({ phase: 'idle' });
   // 常居住地（不参与推算，随导出供 AI 作命盘人事断的地域参照；自由填写）
-  const [residence, setResidence] = useState<ResidenceSetting>({ enabled: false, text: '' });
-  const [boardView, setBoardView] = useState<'both' | 'square' | 'circle'>('both');
-  const [solar, setSolar] = useState<SolarTimeSetting>({
+  const [residence, setResidence] = usePersistentState<ResidenceSetting>('residence', { enabled: false, text: '' });
+  const [boardView, setBoardView] = usePersistentState<'both' | 'square' | 'circle'>('boardView', 'both');
+  const [solar, setSolar] = usePersistentState<SolarTimeSetting>('solar', {
     enabled: false,
     mode: 'auto',
     province: '北京',
