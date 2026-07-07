@@ -200,7 +200,10 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
         return `${k}：${head}…（共 ${rows.length} 期）`;
       })
       .join('；');
-    ctx.流卦運要 = `${brief}。首期即起局时刻，完整多期序列见 liuTimelines 字段，可据以论近期与流年走势。`;
+    ctx.流卦運要 = `${brief}。首期即起局时刻，完整多期序列见 liuTimelines 字段。` +
+      `注意：流卦運取命法流年/月/日卦（自出身卦挨步），随起局四柱（含时辰）呈相位变化——` +
+      `同一年在不同起盘时刻卦爻可不同，非全年恒定；规范且全年不变的年運卦是盘面「值年卦」（result.yearGua）。` +
+      `论流年走势时以值年卦为纲，流卦運相位为辅。`;
   }
 
   if (mingfa) {
@@ -428,7 +431,8 @@ export function toMarkdown(payload: ExportPayload): string {
   if (liuTimelines) {
     L.push('## 流卦運（五計多期）');
     L.push('');
-    L.push('首期即起局时刻，上游 hex_timeline 推法直出：');
+    L.push('首期即起局时刻，上游 hex_timeline 推法直出。**注意**：此为命法流年/月/日卦（自出身卦挨步），');
+    L.push('随起局四柱（含时辰）呈相位变化，非全年恒定；规范且全年不变的年運卦为盘面「值年卦」，此列仅作相位软投影参考。');
     L.push('');
     for (const [scale, rows] of Object.entries(liuTimelines)) {
       const line = rows

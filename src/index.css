@@ -1432,3 +1432,12 @@ body {
   border-color: var(--line-strong);
   box-shadow: 0 0 8px rgba(212, 175, 55, 0.25);
 }
+
+/* 流卦運相位依赖提示 */
+.liu-caveat {
+  border-left: 3px solid rgba(240, 198, 116, 0.5);
+  padding-left: 10px;
+  margin: 2px 0 10px;
+  line-height: 1.7;
+}
+.liu-caveat strong { color: var(--gold-light); }

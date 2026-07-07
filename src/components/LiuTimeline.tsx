@@ -42,6 +42,10 @@ export function LiuTimeline({ state, unavailableNote }: {
         流卦運（五計多期）
         <span className="pan-tag">上游 hex_timeline 推法直出 · 首期為起局時刻 · ← 滑動查看未來 →</span>
       </h3>
+      <p className="pan-note liu-caveat">
+        ⚠ 此處各尺度取<strong>命法流年/月/日卦</strong>（自出身卦挨步），随起局四柱（含<strong>時辰</strong>）呈<strong>相位變化</strong>，
+        故同一年在不同起盤時刻卦爻可不同，非全年恒定；盤面「<strong>值年卦</strong>」才是規範、全年不變的年運卦。此列僅作相位軟投影參考。
+      </p>
       {state.phase === 'idle' && (
         <p className="pan-note">{unavailableNote ?? '流卦運由 kintaiyi 后端推算，后端可用时显示。'}</p>
       )}
