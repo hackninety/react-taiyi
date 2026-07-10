@@ -71,9 +71,10 @@ describe('导出', () => {
     const prompt = generateAIPrompt(payload);
     expect(prompt).toContain('kintaiyiLife');
     expect(prompt).toContain('十提金賦');
-    // 未提供时不出现
+    expect(prompt).toContain('命理人事断的第一手釋文'); // 阅读指引（仅 hasLife 时出现）
+    // 未提供时：无 kintaiyiLife 字段，且无命法釋文阅读指引（meta.流派声明仍会提及键名，故断言指引短语）
     expect(JSON.parse(toJSONText({ result, mingfa })).kintaiyiLife).toBeUndefined();
-    expect(generateAIPrompt({ result, mingfa })).not.toContain('kintaiyiLife');
+    expect(generateAIPrompt({ result, mingfa })).not.toContain('命理人事断的第一手釋文');
   });
 
   it('《太乙秘書》本局断辞并入导出（JSON+ctx+markdown+prompt）', () => {
@@ -214,6 +215,30 @@ describe('导出', () => {
     expect(prompt).toContain(result.kook.text);
     const noMingfa = generateAIPrompt({ result });
     expect(noMingfa).not.toContain('太乙命法（人事）');
+  });
+
+  it('AI Prompt 反幻觉工程：事实清单+应期专节+自检+键路径', () => {
+    const huangji = calculateHuangji(2026, { month: input.month, day: input.day, hour: input.hour });
+    const prompt = generateAIPrompt({ result, mingfa, huangji });
+    // 事实清单先行
+    expect(prompt).toContain('第一步 · 盘面事实清单');
+    expect(prompt).toContain('只誊录、不解读');
+    // 应期推断专节（命法+皇极时 = 第 8 节）
+    expect(prompt).toContain('### 8. 应期推断（时间维度）');
+    expect(prompt).toContain('### 9. 综合断语与建议');
+    // 自检段
+    expect(prompt).toContain('分析后 · 自检');
+    expect(prompt).toContain('来源键路径');
+    // 无命法无皇极时应期为第 6 节、综合为第 7 节
+    const bare = generateAIPrompt({ result });
+    expect(bare).toContain('### 6. 应期推断（时间维度）');
+    expect(bare).toContain('### 7. 综合断语与建议');
+  });
+
+  it('meta 流派声明澄清释文不随积年流派切换', () => {
+    const meta = buildMeta({ result });
+    expect(meta.流派声明).toContain('統宗寶鑑');
+    expect(meta.流派声明).toContain('不随所选积年流派切换');
   });
 });
 

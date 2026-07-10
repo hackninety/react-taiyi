@@ -31,6 +31,10 @@ ${inquiryBlock(payload)}
 ${jsonStr}
 \`\`\`
 
+## 第一步 · 事实清单（务必先做）
+
+正式推断前，先照抄以下字段原值（**只誊录、不解读**）：会（辟卦）/ 运卦及变爻 / 世卦 / 十年卦 / 岁卦 / 月经旬纬日时卦。后续分析不得与之矛盾；引用卦爻辞须据 \`yijingRefs\` 原文（勿凭记忆背诵）。
+
 ## 请按以下框架逐项展开分析
 
 ### 1. 元会运世定位
@@ -51,6 +55,10 @@ ${jsonStr}
 - 综合各层卦象给出该年份的时代特征与大势判断
 - 若该年对应已知历史时期，可与史实互证（注明属推演类比）
 
+## 分析后 · 自检
+- 凡引用卦爻辞，已与 \`yijingRefs\` 原文逐字核对、未张冠李戴
+- 凡缺乏推算数据支撑的断语，已标注为「据传统象义的推演」
+
 要求：分析须引用 JSON 中的具体数据作为论据（会/运/世序号、卦名、变爻），术语须配通俗解释；古远年份的公历日期为拟推格里历，民用历日可能有出入，分析以年为主。皇极经世属传统易学文化，请以文化研究视角推演。`;
 }
 
@@ -61,6 +69,14 @@ export function generateAIPrompt(payload: ExportPayload): string {
   const hasPlanets = Boolean(payload.planets);
   const hasHuangji = Boolean(payload.huangji);
   const hasLife = Boolean(payload.kintaiyiLife && Object.keys(payload.kintaiyiLife).length);
+  const hasPan = Boolean(payload.kintaiyiPan && Object.keys(payload.kintaiyiPan).length);
+  // 自检段引用的键路径示例：只列本导出实际含有的字段
+  const citePaths = [
+    '`mishuText`',
+    hasPan ? '`kintaiyiPan.卷十二.入爻禍福`' : '',
+    hasLife ? '`kintaiyiLife.十提金賦`' : '',
+    '`yijingRefs`',
+  ].filter(Boolean).join('、');
 
   return `你是一位精通太乙神数（三式之首）的资深术数分析师，谙熟《太乙金镜式经》《太乙统宗宝鉴》诸典。请根据以下排盘数据进行深入、专业的推演分析。
 ${inquiryBlock(payload)}
@@ -71,6 +87,15 @@ ${inquiryBlock(payload)}
 \`\`\`json
 ${jsonStr}
 \`\`\`
+
+## 第一步 · 盘面事实清单（务必先做，不得跳过）
+
+正式推断前，先照抄以下字段原值（**只誊录、不解读**），建立事实底稿——后续所有分析不得与之矛盾：
+- 计式 · 积年流派 · 局数 · 阴阳遁 · 积数；太乙落宫、文昌、始击、定目
+- 主算 / 客算 / 定算数值及其属性、主客大将参将落宫；三门具不具、五将发不发的结论
+- 本局所现的全部格局键；值事门；值年 / 值日 / 值时卦${hasMingfa ? '\n- 命法命宫、当前虚岁所行的阳九 / 百六限' : ''}${hasHuangji ? '\n- 皇极会 / 运 / 世 / 十年 / 岁卦及运卦、十年卦之变爻' : ''}
+
+照抄完毕，再进入下述框架分析。凡后续引用释文，须注明来源键路径（如 \`kintaiyiPan.卷十二.入爻禍福\`、\`mishuText\`、\`yijingRefs\`），便于核验。
 
 ## 请按以下框架逐项展开分析
 
@@ -108,10 +133,21 @@ ${hasLife ? '- 逐条引用 kintaiyiLife 卷二十釋文断人事：命身宫所
 - 将皇极年卦、运卦之象与太乙局象互参，为断事提供千年尺度的时代背景
 - 岁卦流派固定为黄畿派（已校订原文；祝泌派未校订、已关闭不用）
 ` : ''}
-### ${6 + (hasMingfa ? 1 : 0) + (hasHuangji ? 1 : 0)}. 综合断语与建议
+### ${6 + (hasMingfa ? 1 : 0) + (hasHuangji ? 1 : 0)}. 应期推断（时间维度）
+- ${hasHuangji ? '结合統運入爻年段（kintaiyiPan.卷十二）、' : ''}阳九 / 百六灾祥周期节点，定大势转折之年段
+- ${payload.liuTimelines ? '据流卦时间轴（liuTimelines 流年/流月/流日/流時/流分，首期即起局时刻）推近期节律——以值年卦为纲、流卦相位为辅；' : ''}结合八门值事、门将旺衰${payload.result && Object.keys(payload.kintaiyiPan ?? {}).length ? '、《太乙秘書》所载伏兵利时（mishuText）' : ''}，给出宜动宜静的具体时间窗口
+- 应期结论须尽量落到可核验的年 / 月 / 时段，勿泛泛而谈
+
+### ${7 + (hasMingfa ? 1 : 0) + (hasHuangji ? 1 : 0)}. 综合断语与建议
 - 就此局对所问之事给出明确倾向（宜主宜客、宜动宜静、宜攻宜守）
 - 时机建议（结合门、将、格局给出趋避）
 - 提醒事项
+
+## 分析后 · 自检（务必执行）
+- 逐项对照 \`analysisContext\` 断事要点，确认无遗漏关键字段、无与「事实清单」矛盾之处
+- 凡引用释文，已注明来源键路径（如 ${citePaths}）
+- 凡引用卦爻辞，已与 \`yijingRefs\` 原文逐字核对、未张冠李戴
+- 凡缺乏盘面数据支撑的断语，已明确标注为「据传统象义的推演」而非盘面结论
 
 要求：分析须引用 JSON 中的具体数据作为论据（如局数、算数、落宫），在使用专业术语的同时给出通俗易懂的解释；始终锁定 meta 指定的流派口径，勿与其他流派数据交叉。太乙神数属传统术数文化，请以文化研究视角进行推演。`;
 }
