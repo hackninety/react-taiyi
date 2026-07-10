@@ -116,6 +116,35 @@ describe('导出', () => {
     expect(hjPrompt).toContain('本次所占（分析聚焦）');
   });
 
+  it('周易经文附录并入导出（JSON+meta+ctx+markdown）', () => {
+    const huangji = calculateHuangji(2026, { month: input.month, day: input.day, hour: input.hour });
+    const payload = { result, huangji };
+    const parsed = JSON.parse(toJSONText(payload));
+    // 值卦与皇极各层的卦都应有经文
+    expect(Array.isArray(parsed.yijingRefs.卦)).toBe(true);
+    expect(parsed.yijingRefs.卦.length).toBeGreaterThan(0);
+    const first = parsed.yijingRefs.卦[0];
+    expect(first.卦辞.length).toBeGreaterThan(0);
+    expect(Array.isArray(first.爻辞)).toBe(true);
+    // 值年卦（result.yearGua，带卦符）应能被收录（卦符块 U+4DC0–4DFF 在 U+4E00 前，用 一-鿿 剥离）
+    const yearHex = result.yearGua.replace(/[^一-鿿]/g, '');
+    expect(parsed.yijingRefs.卦.some((h: { 卦: string }) => h.卦 === yearHex)).toBe(true);
+    // 皇极运卦变爻应标为「本盘动爻」
+    expect(parsed.yijingRefs.卦.some((h: { 本盘动爻?: string[] }) => h.本盘动爻?.length)).toBe(true);
+    expect(parsed.meta.启用模块.join()).toContain('周易经文附录');
+    const ctx = buildAnalysisContext(payload) as Record<string, string>;
+    expect(ctx.卦爻辞须知).toContain('yijingRefs');
+    const md = toMarkdown(payload);
+    expect(md).toContain('## 周易经文（本盘出现之卦）');
+    // 仅皇极模式也应有经文附录
+    const hjOnly = JSON.parse(toJSONText({
+      result: null,
+      huangji: calculateHuangji(-2356, { month: 3, day: 15, hour: 12 }),
+      huangjiOnlyInput: { year: -2356, month: 3, day: 15, hour: 12, minute: 0 },
+    }));
+    expect(hjOnly.yijingRefs.卦.length).toBeGreaterThan(0);
+  });
+
   it('Markdown 含全部章节与关键数据', () => {
     const md = toMarkdown({
       result,

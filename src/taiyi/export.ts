@@ -13,6 +13,8 @@ import type { LiuData } from './pan';
 import { formatGregorianYearCn } from './huangji';
 import { SIXTEEN_GOD, NUM_TO_GONG } from './constants';
 import { getMishu } from './mishu';
+import { getHexagram } from './yijing';
+import type { Hexagram as YiHexagram } from './yijing';
 
 export interface ExportPayload {
   /** 太乙主盘；超出太乙历法范围（600–9999 外的皇极全跨度年份）时为空 */
@@ -80,6 +82,10 @@ function solarText(solarTime?: SolarTimeInfo | null): string {
 
 const residenceText = (r: NonNullable<ExportPayload['residence']>): string => r.text;
 
+const YIJING_CTX_NOTE =
+  '本盘所有出现之卦（值卦/命法卦链/皇极各层/流卦）的《周易》通行本卦辞、爻辞原文见 yijingRefs 字段（ctext 权威公版）。'
+  + '凡引用卦爻辞，务必以 yijingRefs 为准、勿凭记忆背诵，以免错位串卦；皇极变爻、流卦动爻所值之爻见各卦「本盘动爻」。';
+
 const inquiryText = (q: NonNullable<ExportPayload['inquiry']>): string =>
   `【${q.topic}】${q.text ?? ''}`.trim();
 
@@ -116,6 +122,7 @@ export function buildMeta(payload: ExportPayload): ExportMeta {
   if (payloadHasPan) modules.push('kintaiyi 全解释盘（統宗寶鑑诸卷）');
   if (liuTimelines) modules.push('流卦運多期（流年/月/日/時/分）');
   if (historyExamples?.length) modules.push('局數史例對照');
+  if (buildYijingRefs(payload)) modules.push('周易经文附录（出现之卦的卦辞爻辞原文）');
 
   return {
     应用: 'react-taiyi 太乙神数排盘',
@@ -170,6 +177,7 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
         `${String(i.hour).padStart(2, '0')}:${String(i.minute).padStart(2, '0')}（拟推格里历，天文纪年 ${i.year}）。`;
     }
     if (huangji) ctx.皇极大势 = huangjiSummary(huangji);
+    if (huangji) ctx.卦爻辞须知 = YIJING_CTX_NOTE;
     return ctx;
   }
 
@@ -247,7 +255,74 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
     ctx.皇极大势 = huangjiSummary(huangji);
   }
 
+  ctx.卦爻辞须知 = YIJING_CTX_NOTE;
+
   return ctx;
+}
+
+/** 收集 payload 中出现的所有卦名（原始串，可能带卦符/繁简/異體「無」）与其被引用的动爻 */
+function collectGuaRefs(p: ExportPayload): { names: string[]; yaoByGua: Map<string, Set<string>> } {
+  const names: string[] = [];
+  const yaoByGua = new Map<string, Set<string>>();
+  const addYao = (gua: string, yao: string) => {
+    const h = getHexagram(gua);
+    if (!h) return;
+    if (!yaoByGua.has(h.name)) yaoByGua.set(h.name, new Set());
+    yaoByGua.get(h.name)!.add(yao);
+  };
+
+  const r = p.result;
+  if (r) names.push(r.yearGua, r.dayGua, r.hourGua);
+  const m = p.mingfa;
+  if (m) {
+    for (const g of [m.yearGua, m.monthGua, m.dayGua, m.hourGua, m.minuteGua, m.lifeStartGua]) {
+      if (g?.gua) names.push(g.gua);
+    }
+  }
+  const h = p.huangji;
+  if (h) {
+    names.push(
+      h.hui.hexagram.name, h.yun.hexagram.name, h.yun.master.name, h.shi.hexagram.name,
+      h.decade.hexagram.name, h.sui.name, h.yueJing.name, h.xunWei.name, h.day.name, h.shiJing.name,
+    );
+    // 皇极运卦/十年卦的变爻：直接标注为动爻
+    addYao(h.yun.hexagram.name, h.yun.yaoName);
+    addYao(h.decade.hexagram.name, h.decade.yaoName);
+  }
+  const liu = p.liuTimelines;
+  if (liu) {
+    for (const rows of Object.values(liu)) {
+      for (const s of rows) { names.push(s.卦); addYao(s.卦, s.爻名); }
+    }
+  }
+  return { names, yaoByGua };
+}
+
+/**
+ * 《周易》经文附录：为盘面/皇极/流卦/命法出现的每个卦附上卦辞与爻辞原文（ctext 权威公版），
+ * 抑制 LLM 背诵爻辞时的错位串卦。标注被引用的动爻（皇极变爻/流卦动爻）便于 AI 定位。
+ */
+export function buildYijingRefs(payload: ExportPayload) {
+  const { names, yaoByGua } = collectGuaRefs(payload);
+  const seen = new Map<number, YiHexagram>();
+  for (const raw of names) {
+    const hx = getHexagram(raw);
+    if (hx) seen.set(hx.num, hx);
+  }
+  if (seen.size === 0) return null;
+  const list = [...seen.values()]
+    .sort((a, b) => a.num - b.num)
+    .map((hx) => {
+      const dong = yaoByGua.get(hx.name);
+      return {
+        卦: hx.name,
+        符: hx.symbol,
+        卦辞: hx.guaCi,
+        爻辞: hx.yao.map((y) => `${y.name}：${y.text}`),
+        ...(dong && dong.size ? { 本盘动爻: [...dong] } : {}),
+      };
+    });
+  return list;
 }
 
 export function toJSONText(payload: ExportPayload): string {
@@ -256,6 +331,7 @@ export function toJSONText(payload: ExportPayload): string {
     kintaiyiPan, kintaiyiLife, historyExamples, liuTimelines, residence, inquiry,
   } = payload;
   const mishuEntry = result ? getMishu(result.kook.dun, result.kook.num) : null;
+  const yijingRefs = buildYijingRefs(payload);
   return JSON.stringify(
     {
       app: 'react-taiyi',
@@ -288,6 +364,16 @@ export function toJSONText(payload: ExportPayload): string {
       ...(historyExamples?.length ? { historyExamples } : {}),
       // 流卦運多期（流年12/流月12/流日15/流時12辰/流分10；首期即起局时刻）
       ...(liuTimelines ? { liuTimelines } : {}),
+      // 周易经文附录（ctext 权威公版）：本盘出现之卦的卦辞爻辞原文，供 AI 精确引用、防错位串卦
+      ...(yijingRefs
+        ? {
+          yijingRefs: {
+            说明: '本盘（值卦/命法卦链/皇极各层含变爻/流卦动爻）出现之卦的《周易》通行本卦辞、爻辞原文，'
+              + '源自 ctext.org 公版经文。引用卦爻辞时请以此为准，勿凭记忆——「本盘动爻」为皇极变爻/流卦动爻所值之爻。',
+            卦: yijingRefs,
+          },
+        }
+        : {}),
     },
     null,
     2,
@@ -311,6 +397,27 @@ function pushHuangjiSection(L: string[], huangji: HuangjiInfo): void {
   L.push(`- 岁卦（黄畿派）：${hx(huangji.sui)}`);
   L.push(`- 皇极岁内第 ${huangji.dayOfYear} 日 · 月经卦 / 旬纬卦 / 日卦 / 时经卦：${hx(huangji.yueJing)} / ${hx(huangji.xunWei)} / ${hx(huangji.day)} / ${hx(huangji.shiJing)}`);
   L.push(`  - 推法：${huangji.subYearNote}`);
+  L.push('');
+}
+
+/** 周易经文 Markdown 段（主盘/仅皇极两种模式共用）：卦辞 + 动爻爻辞（完整爻辞见 JSON） */
+function pushYijingSection(L: string[], payload: ExportPayload): void {
+  const refs = buildYijingRefs(payload);
+  if (!refs) return;
+  L.push('## 周易经文（本盘出现之卦）');
+  L.push('');
+  L.push('ctext 权威公版卦辞/爻辞原文，引用卦爻辞以此为准（勿凭记忆）；完整爻辞见 JSON `yijingRefs` 字段。');
+  L.push('');
+  for (const h of refs) {
+    const dong = (h as { 本盘动爻?: string[] }).本盘动爻;
+    L.push(`- **${h.卦}${h.符}**：${h.卦辞}${dong ? `　【本盘动爻：${dong.join('、')}】` : ''}`);
+    if (dong) {
+      for (const yn of dong) {
+        const line = h.爻辞.find((y) => y.startsWith(yn));
+        if (line) L.push(`  - ${line}`);
+      }
+    }
+  }
   L.push('');
 }
 
@@ -351,6 +458,7 @@ function toHuangjiOnlyMarkdown(payload: ExportPayload): string {
     L.push('');
     pushHuangjiSection(L, huangji);
   }
+  pushYijingSection(L, payload);
   L.push('---');
   L.push(MD_FOOTER);
   return L.join('\n');
@@ -567,6 +675,8 @@ export function toMarkdown(payload: ExportPayload): string {
   if (huangji) {
     pushHuangjiSection(L, huangji);
   }
+
+  pushYijingSection(L, payload);
 
   L.push('---');
   L.push(MD_FOOTER);

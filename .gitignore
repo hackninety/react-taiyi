@@ -3,3 +3,5 @@ dist/
 *.local
 *.tsbuildinfo
 .DS_Store
+# ctext 抓取缓存（周易经文，可由 scripts/gen_yijing.py 重新抓取再生）
+scripts/.yijing_cache/
