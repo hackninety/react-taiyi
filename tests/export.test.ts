@@ -90,6 +90,32 @@ describe('导出', () => {
     expect(prompt).toContain('《太乙秘書》');
   });
 
+  it('所占何事（inquiry）并入导出与 Prompt 聚焦（meta+ctx+JSON+md+prompt）', () => {
+    const payload = { result, inquiry: { topic: '事占', text: '某项目下半年可否推进' } };
+    const meta = buildMeta(payload);
+    expect(meta.所占之事).toContain('【事占】某项目下半年可否推进');
+    const ctx = buildAnalysisContext(payload) as Record<string, string>;
+    expect(ctx.所占之事).toContain('围绕此事');
+    const parsed = JSON.parse(toJSONText(payload));
+    expect(parsed.inquiry.topic).toBe('事占');
+    const md = toMarkdown(payload);
+    expect(md).toContain('所占何事：【事占】某项目下半年可否推进');
+    const prompt = generateAIPrompt(payload);
+    expect(prompt).toContain('本次所占（分析聚焦）');
+    expect(prompt).toContain('宜动宜静');
+    // 未设置时不出现
+    expect(buildMeta({ result }).所占之事).toBeUndefined();
+    expect(generateAIPrompt({ result })).not.toContain('本次所占');
+    // 仅皇极模式同样注入
+    const hjPrompt = generateAIPrompt({
+      result: null,
+      huangji: calculateHuangji(-2356, { month: 3, day: 15, hour: 12 }),
+      huangjiOnlyInput: { year: -2356, month: 3, day: 15, hour: 12, minute: 0 },
+      inquiry: { topic: '年运' },
+    });
+    expect(hjPrompt).toContain('本次所占（分析聚焦）');
+  });
+
   it('Markdown 含全部章节与关键数据', () => {
     const md = toMarkdown({
       result,

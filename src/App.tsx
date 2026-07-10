@@ -23,7 +23,7 @@ import { LifeCards } from './components/LifeCards';
 import type { LifeState } from './components/LifeCards';
 import { DocsView } from './components/DocsPages';
 import { InputPanel } from './components/InputPanel';
-import type { ResidenceSetting, SolarTimeSetting } from './components/InputPanel';
+import type { InquirySetting, ResidenceSetting, SolarTimeSetting } from './components/InputPanel';
 import { fetchLiu } from './taiyi/pan';
 import type { LiuState } from './components/LiuTimeline';
 import { Board } from './components/Board';
@@ -100,6 +100,8 @@ export default function App() {
   const [life, setLife] = useState<LifeState>({ phase: 'idle' });
   // 常居住地（不参与推算，随导出供 AI 作命盘人事断的地域参照；自由填写）
   const [residence, setResidence] = usePersistentState<ResidenceSetting>('residence', { enabled: false, text: '' });
+  // 所占何事（不参与推算，随导出注入 AI Prompt 定制分析聚焦）
+  const [inquiry, setInquiry] = usePersistentState<InquirySetting>('inquiry', { enabled: false, topic: '事占', text: '' });
   const [boardView, setBoardView] = usePersistentState<'both' | 'square' | 'circle'>('boardView', 'both');
   const [solar, setSolar] = usePersistentState<SolarTimeSetting>('solar', {
     enabled: false,
@@ -417,6 +419,8 @@ export default function App() {
           solarHint={solarHint}
           residence={residence}
           onResidenceChange={setResidence}
+          inquiry={inquiry}
+          onInquiryChange={setInquiry}
         />
 
         {error && <div className="error">排盘失败：{error}</div>}
@@ -548,6 +552,9 @@ export default function App() {
                 residence: residence.enabled && residence.text.trim()
                   ? { text: residence.text.trim() }
                   : null,
+                inquiry: inquiry.enabled
+                  ? { topic: inquiry.topic, ...(inquiry.text.trim() ? { text: inquiry.text.trim() } : {}) }
+                  : null,
               }}
             />
           </>
@@ -566,6 +573,9 @@ export default function App() {
                   year: input.year, month: input.month, day: input.day,
                   hour: input.hour, minute: input.minute,
                 },
+                inquiry: inquiry.enabled
+                  ? { topic: inquiry.topic, ...(inquiry.text.trim() ? { text: inquiry.text.trim() } : {}) }
+                  : null,
               }}
             />
           </>

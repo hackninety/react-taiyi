@@ -13,6 +13,17 @@ export interface ResidenceSetting {
   text: string;
 }
 
+/** 占类（决定 AI 分析侧重；「通用」为通盘泛断） */
+export const INQUIRY_TOPICS = ['事占', '命占', '年运', '军事', '择时', '通用'] as const;
+export type InquiryTopic = (typeof INQUIRY_TOPICS)[number];
+
+/** 所占何事（不参与推算，随导出注入 AI Prompt 定制分析聚焦） */
+export interface InquirySetting {
+  enabled: boolean;
+  topic: InquiryTopic;
+  text: string;
+}
+
 export interface SolarTimeSetting {
   enabled: boolean;
   /** 定位模式：当前时区（自动）或手动选择城市 */
@@ -40,6 +51,8 @@ interface Props {
   solarHint?: string | null;
   residence: ResidenceSetting;
   onResidenceChange: (r: ResidenceSetting) => void;
+  inquiry: InquirySetting;
+  onInquiryChange: (q: InquirySetting) => void;
 }
 
 export function InputPanel({
@@ -48,6 +61,7 @@ export function InputPanel({
   showTenjing, onShowTenjingChange, tenjingLoading,
   showHuangji, onShowHuangjiChange,
   solar, onSolarChange, solarHint, residence, onResidenceChange,
+  inquiry, onInquiryChange,
 }: Props) {
   const set = (patch: Partial<TaiyiInput>) => onChange({ ...value, ...patch });
 
@@ -301,6 +315,45 @@ export function InputPanel({
           />
         ) : (
           <span className="solar-hint dim">未设置（仅影响 AI 导出内容，不影响盘面）</span>
+        )}
+      </div>
+
+      {/* 所占何事：占类+问题文本，不参与推算，随导出注入 AI Prompt 定制分析聚焦 */}
+      <div className="solar-row">
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={inquiry.enabled}
+            onChange={(ev) => onInquiryChange({ ...inquiry, enabled: ev.target.checked })}
+          />
+          所占何事（AI 分析聚焦）
+        </label>
+        {inquiry.enabled ? (
+          <>
+            <select
+              aria-label="占类"
+              value={inquiry.topic}
+              onChange={(ev) => onInquiryChange({ ...inquiry, topic: ev.target.value as InquiryTopic })}
+            >
+              <option value="事占">事占（谋事成败）</option>
+              <option value="命占">命占（人身命运）</option>
+              <option value="年运">年运（流年运势）</option>
+              <option value="军事">军事（兵机战守）</option>
+              <option value="择时">择时（趋避时机）</option>
+              <option value="通用">通用（通盘泛断）</option>
+            </select>
+            <input
+              className="residence-input"
+              type="text"
+              value={inquiry.text}
+              placeholder="如：某项目下半年可否推进 / 本命流年财官 / 何时出行为宜"
+              maxLength={120}
+              aria-label="所占何事"
+              onChange={(ev) => onInquiryChange({ ...inquiry, text: ev.target.value })}
+            />
+          </>
+        ) : (
+          <span className="solar-hint dim">未设置（AI 将做通盘泛断）</span>
         )}
       </div>
     </section>

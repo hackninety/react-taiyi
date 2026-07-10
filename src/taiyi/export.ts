@@ -37,6 +37,8 @@ export interface ExportPayload {
   liuTimelines?: LiuData | null;
   /** 常居住地（不参与推算，供 AI 作命盘人事断的地域参照；自由填写文本） */
   residence?: { text: string } | null;
+  /** 所占何事（占类+问题文本；不参与推算，注入 AI 分析聚焦） */
+  inquiry?: { topic: string; text?: string } | null;
 }
 
 /** 四流派太乙积年常数（与 engine TN_DICT 一致，导出时注明以防混用） */
@@ -78,6 +80,9 @@ function solarText(solarTime?: SolarTimeInfo | null): string {
 
 const residenceText = (r: NonNullable<ExportPayload['residence']>): string => r.text;
 
+const inquiryText = (q: NonNullable<ExportPayload['inquiry']>): string =>
+  `【${q.topic}】${q.text ?? ''}`.trim();
+
 /** 口径明细结构（两种模式字段并集，未涉及的项为空） */
 export interface ExportMeta {
   应用: string;
@@ -89,6 +94,7 @@ export interface ExportMeta {
   太乙主盘?: string;
   时区?: string;
   常居住地?: string;
+  所占之事?: string;
   皇极岁卦流派?: string;
   皇极月日时卦口径?: string;
   启用模块: string[];
@@ -98,7 +104,7 @@ export interface ExportMeta {
 
 /** 口径明细：AI 读盘前先看这里，重点是流派标注，防止不同流派数据错乱 */
 export function buildMeta(payload: ExportPayload): ExportMeta {
-  const { result: r, mingfa, planets, solarTime, huangji, kintaiyiPan, kintaiyiLife, liuTimelines, residence, historyExamples } = payload;
+  const { result: r, mingfa, planets, solarTime, huangji, kintaiyiPan, kintaiyiLife, liuTimelines, residence, historyExamples, inquiry } = payload;
   const payloadHasPan = Boolean(kintaiyiPan && Object.keys(kintaiyiPan).length);
   const payloadHasLife = Boolean(kintaiyiLife && Object.keys(kintaiyiLife).length);
   const modules: string[] = [];
@@ -131,6 +137,7 @@ export function buildMeta(payload: ExportPayload): ExportMeta {
       ? { 时区: `输入时间解释时区 ${solarTime.timezone}（${utcStr(solarTime.tzOffsetMinutes ?? 0)}）${solarTime.applied ? `；真太阳时地点 ${solarTime.place}（经度 ${solarTime.longitude}°）` : ''}` }
       : {}),
     ...(residence ? { 常居住地: `${residenceText(residence)}——命主长期生活地，供人事断的地域参照，不参与排盘` } : {}),
+    ...(inquiry ? { 所占之事: `${inquiryText(inquiry)}——AI 分析请围绕此事组织，不参与排盘` } : {}),
     ...(huangji
       ? {
         皇极岁卦流派: `黄畿（已校订原文；${huangji.algorithmNote}）`,
@@ -146,13 +153,16 @@ export function buildMeta(payload: ExportPayload): ExportMeta {
 }
 
 /** 断事要点预归集：给 AI 的推理抓手 */
-export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, huangjiOnlyInput, historyExamples, liuTimelines, residence, kintaiyiLife }: ExportPayload) {
+export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, huangjiOnlyInput, historyExamples, liuTimelines, residence, kintaiyiLife, inquiry }: ExportPayload) {
   const ctx: Record<string, unknown> = {};
 
   if (!r) {
     ctx.盘序须知 =
       '本导出为皇极经世历单独推算（起局年份超出太乙历法验证范围，太乙主盘未出盘）。' +
       '以下为程序预先归集的断读要点，细节以 huangji 原始字段为准。';
+    if (inquiry) {
+      ctx.所占之事 = `${inquiryText(inquiry)}——分析请围绕此事组织，与所问无关的泛论从略。`;
+    }
     if (huangjiOnlyInput) {
       const i = huangjiOnlyInput;
       ctx.时空 =
@@ -166,6 +176,10 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
   ctx.盘序须知 =
     `本盘为太乙神数【${r.jiName} · ${r.methodName}】，以下为程序预先归集的断读要点，` +
     '仅作抓手，落宫、算数等细节以 result 原始字段为准。';
+
+  if (inquiry) {
+    ctx.所占之事 = `${inquiryText(inquiry)}——分析请围绕此事组织，与所问无关的泛论从略。`;
+  }
 
   ctx.时空 =
     `公历 ${r.input.year}-${String(r.input.month).padStart(2, '0')}-${String(r.input.day).padStart(2, '0')} ` +
@@ -239,7 +253,7 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
 export function toJSONText(payload: ExportPayload): string {
   const {
     result, mingfa, planets, solarTime, huangji, huangjiOnlyInput,
-    kintaiyiPan, kintaiyiLife, historyExamples, liuTimelines, residence,
+    kintaiyiPan, kintaiyiLife, historyExamples, liuTimelines, residence, inquiry,
   } = payload;
   const mishuEntry = result ? getMishu(result.kook.dun, result.kook.num) : null;
   return JSON.stringify(
@@ -250,6 +264,7 @@ export function toJSONText(payload: ExportPayload): string {
       analysisContext: buildAnalysisContext(payload),
       ...(solarTime?.timezone || solarTime?.applied ? { solarTime } : {}),
       ...(residence ? { residence } : {}),
+      ...(inquiry ? { inquiry } : {}),
       ...(result ? { result } : {}),
       // 《太乙秘書》本局斷辭（144 局静态查表，kintaiyi taiyimishu 移植）：本局经典总断
       ...(result && mishuEntry
@@ -323,6 +338,9 @@ function toHuangjiOnlyMarkdown(payload: ExportPayload): string {
     const i = huangjiOnlyInput;
     L.push(`| 起局时间 | ${yearCn}${i.month}月${i.day}日 ${String(i.hour).padStart(2, '0')}:${String(i.minute).padStart(2, '0')}（拟推格里历，天文纪年 ${i.year}） |`);
   }
+  if (payload.inquiry) {
+    L.push(`| 所占之事 | ${inquiryText(payload.inquiry)}（分析聚焦，不参与推算） |`);
+  }
   L.push('');
   L.push(`> ⚠️ ${meta.流派声明}`);
   L.push('');
@@ -339,7 +357,7 @@ function toHuangjiOnlyMarkdown(payload: ExportPayload): string {
 }
 
 export function toMarkdown(payload: ExportPayload): string {
-  const { result: r, mingfa, planets, solarTime, huangji, historyExamples, liuTimelines, residence, kintaiyiLife } = payload;
+  const { result: r, mingfa, planets, solarTime, huangji, historyExamples, liuTimelines, residence, kintaiyiLife, inquiry } = payload;
   if (!r) return toHuangjiOnlyMarkdown(payload);
   const L: string[] = [];
   const { input } = r;
@@ -385,6 +403,9 @@ export function toMarkdown(payload: ExportPayload): string {
   }
   if (residence) {
     L.push(`- 常居住地：${residenceText(residence)}（命主长期生活地，供人事断参照，不参与排盘）`);
+  }
+  if (inquiry) {
+    L.push(`- 所占何事：${inquiryText(inquiry)}（分析聚焦，不参与排盘）`);
   }
   if (solarTime?.applied) {
     L.push(`- 真太阳时：已按 ${solarTime.place}（东经 ${solarTime.longitude}°）校正 ${solarTime.offsetMinutes! >= 0 ? '+' : ''}${solarTime.offsetMinutes} 分钟，上行公历为校正后时间`);

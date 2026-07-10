@@ -4,12 +4,29 @@
 import type { ExportPayload } from '../taiyi';
 import { toJSONText } from '../taiyi';
 
+/** 占类 → 分析侧重指引（与 InputPanel INQUIRY_TOPICS 对应；未知占类回退通盘） */
+const TOPIC_EMPHASIS: Record<string, string> = {
+  事占: '侧重主客定算与格局、三门五将、《太乙秘書》本局斷辭（mishuText），明断宜主宜客、宜动宜静与成败倾向；',
+  命占: '侧重太乙命法（mingfa）与卷二十釋文（kintaiyiLife）：命宫与十二宫星断、阳九百六行限，结合值年卦论本年吉凶；',
+  年运: '侧重值年卦（result.yearGua 为纲）、統運入爻（kintaiyiPan.卷十二）、阳九百六周期、流卦時間軸（liuTimelines 相位为辅）与皇极岁卦大势；',
+  军事: '侧重《太乙秘書》斷辭之出军方位阵法旗色伏兵时（mishuText）、军事诸卷（kintaiyiPan 軍事戰略/應用/占斷）、主客算将与三门五将；',
+  择时: '侧重应期与趋避：八门值事、《太乙秘書》伏兵利时、流時/流分卦（liuTimelines）、阳九百六节点，给出具体时间窗口建议；',
+};
+
+/** 所占何事聚焦段（未设置时为空串） */
+function inquiryBlock(payload: ExportPayload): string {
+  const q = payload.inquiry;
+  if (!q) return '';
+  const emphasis = TOPIC_EMPHASIS[q.topic] ?? '';
+  return `\n**本次所占（分析聚焦）**：【${q.topic}】${q.text ?? ''}——请围绕此事组织全部分析与断语；${emphasis}与所问无关的部分简述即可。\n`;
+}
+
 /** 仅皇极模式（起局年份超出太乙历法范围）：单独的元会运世分析提示词 */
-function generateHuangjiOnlyPrompt(jsonStr: string): string {
+function generateHuangjiOnlyPrompt(payload: ExportPayload, jsonStr: string): string {
   return `你是一位精通邵雍《皇极经世书》元会运世体系的资深易学分析师。请根据以下推算数据，对该年份所处的历史周期与卦运大势进行深入分析。
 
 **阅读顺序（重要）**：请先读 JSON 顶部的 \`meta\`（口径明细）——尤其**皇极岁卦流派**（黄畿派，已对照原文校验；祝泌派未校订、本应用已关闭不用），全程锁定该口径；再读 \`analysisContext.皇极大势\`；最后以 \`huangji\` 原始字段核对展开。本次起局年份超出太乙历法验证范围（公元 600–9999），故无太乙主盘，仅推皇极经世历（一元全跨度：公元前 67016 — 公元 62583）。
-
+${inquiryBlock(payload)}
 \`\`\`json
 ${jsonStr}
 \`\`\`
@@ -38,14 +55,14 @@ ${jsonStr}
 
 export function generateAIPrompt(payload: ExportPayload): string {
   const jsonStr = toJSONText(payload);
-  if (!payload.result) return generateHuangjiOnlyPrompt(jsonStr);
+  if (!payload.result) return generateHuangjiOnlyPrompt(payload, jsonStr);
   const hasMingfa = Boolean(payload.mingfa);
   const hasPlanets = Boolean(payload.planets);
   const hasHuangji = Boolean(payload.huangji);
   const hasLife = Boolean(payload.kintaiyiLife && Object.keys(payload.kintaiyiLife).length);
 
   return `你是一位精通太乙神数（三式之首）的资深术数分析师，谙熟《太乙金镜式经》《太乙统宗宝鉴》诸典。请根据以下排盘数据进行深入、专业的推演分析。
-
+${inquiryBlock(payload)}
 **阅读顺序（重要）**：请先读 JSON 顶部的 \`meta\`（口径明细）——尤其**太乙积年流派**${hasHuangji ? '与**皇极岁卦流派**' : ''}，不同流派积数/起卦口径不同、结果不可混用，请全程锁定该口径；再读 \`analysisContext\`（程序预先归集的断事要点，作为抓手）；最后深入 \`result\`${hasMingfa ? '、\`mingfa\`' : ''}${hasPlanets ? '、\`tenJing\`' : ''}${hasHuangji ? '、\`huangji\`' : ''} 等原始字段核对与展开。\`mishuText\` 为《太乙秘書》對本局的經典總斷（每局權威斷辭：利主利客、出軍方位、陣法旗色、雲氣、伏兵時辰），主客勝負與趨避推演請以此為綱、與盤面數據互證——吻合處引為據，出入處說明盤面依據。若含 \`kintaiyiPan\` 字段（kintaiyi 全解释盘，繁体中文键为上游《太乙統宗寶鑑》原样），其值宿断事/断法释文/釋格局/統運（卷十二）/卦象（卷十三）/军事诸卷/運籌博弈分析是断事的第一手釋文依据，请充分引用。${hasLife ? '若含 `kintaiyiLife` 字段（命法卷二十上游直出釋文：安命安身宮、飛祿飛馬黑符、十提金賦、十二宮星斷、雙星同宮論、諸星上中下三等），這是命理人事断的第一手釋文，命法部分请优先引用其原文。' : ''}若含 \`historyExamples\` 字段（该年份的古籍史例纪事与史載局數），请将盘面结论与史载事件互证并明确指出吻合或出入之处。若含 \`liuTimelines\` 字段（流年/流月/流日/流時/流分多期直卦序列，首期即起局时刻），请据以展开近期走势与流年推演——但须知这是**命法流卦（自出身卦挨步，随起局四柱含时辰呈相位变化，非全年恒定）**，规范且全年不变的年運卦是 \`result.yearGua\`（值年卦），论流年以值年卦为纲、流卦運相位为辅，勿把相位卦当作规范年卦；\`residence\` 为命主常居住地（不参与排盘，作人事断的方位地缘参照）；\`solarTime\` 标注了输入时间的解释时区与真太阳时校正明细；\`mingfa\` 中 yangjiuXingxian/bailiuXingxian 即大限（阳九/百六行限）全表，请结合当前虚岁点出所行之限。
 
 数据说明：JSON 含计式与积年流派、积数、局式（阴阳遁/七十二局/理天地人）、太乙落宫、文昌始击定目、计神合神、主客定三算与大将参将、十六神式盘落位、八门值事与分布、格局（掩迫关囚击格对提挟执提四郭固杜）、君臣民基等神煞、阳九百六、值年日时卦${hasMingfa ? '、太乙命法（命法积数/三才数/十二命宫/阳九百六行限/流年卦链）' : ''}${hasPlanets ? '、十精七曜落位' : ''}${hasHuangji ? '、皇极经世历（元会运世定位与辟卦/运卦/世卦/十年卦/岁卦/月日时卦，可与太乙局象互参大时代背景）' : ''}，请充分利用所有字段。
