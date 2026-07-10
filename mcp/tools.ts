@@ -169,6 +169,72 @@ export function knowledge(): string {
   return KNOWLEDGE_APPENDIX;
 }
 
+// ── 本地：经典原文库（维基文库四庫本，mcp/data 专用数据、不进 web 打包） ──
+
+interface ClassicChapter { 卷: string; 维基文库页: string; 字数: number; 文: string }
+interface ClassicBook { 书名: string; 作者: string; 版本: string; 来源: string; 卷: ClassicChapter[] }
+
+let jinjingCache: ClassicBook | null = null;
+async function loadJinjing(): Promise<ClassicBook> {
+  jinjingCache ??= JSON.parse(
+    await readFile(path.join(ROOT, 'mcp', 'data', 'jinjing.json'), 'utf8'),
+  ) as ClassicBook;
+  return jinjingCache;
+}
+
+const PART_SIZE = 8000;
+const CN_NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+
+export async function classics(a: { chapter?: string; query?: string; part?: number }): Promise<string> {
+  const book = await loadJinjing();
+  const chapters = book.卷;
+  const findChapter = (want: string): ClassicChapter | undefined => {
+    const w = want.replace(/\s/g, '');
+    const asCn = /^\d{1,2}$/.test(w) ? `卷${CN_NUM[Number(w) - 1] ?? ''}` : null;
+    const asCn2 = /^卷\d{1,2}$/.test(w) ? `卷${CN_NUM[Number(w.slice(1)) - 1] ?? ''}` : null;
+    return chapters.find((c) =>
+      c.卷 === w || c.卷 === asCn || c.卷 === asCn2 || c.卷 === `卷${w}` || c.维基文库页.endsWith(w));
+  };
+
+  if (a.query) {
+    const q = a.query;
+    const scoped = a.chapter ? chapters.filter((c) => c === findChapter(a.chapter!)) : chapters;
+    const hits: Array<{ 卷: string; 行: number; 文: string }> = [];
+    for (const c of scoped) {
+      c.文.split('\n').forEach((line, i) => {
+        if (!line.includes(q)) return;
+        const t = line.trim();
+        hits.push({ 卷: c.卷, 行: i + 1, 文: t.length > 240 ? `${t.slice(0, 240)}……` : t });
+      });
+    }
+    if (!hits.length) return jsonText({ 书: book.书名, 检索: q, 命中: 0 });
+    return jsonText({
+      书: book.书名, 检索: q, 命中: hits.length,
+      ...(hits.length > 30 ? { 提示: '仅显示前 30 行；可加 chapter 缩小范围' } : {}),
+      行: hits.slice(0, 30),
+    });
+  }
+
+  if (a.chapter) {
+    const c = findChapter(a.chapter);
+    if (!c) throw new Error(`查无此卷：${a.chapter}（可用：${chapters.map((x) => x.卷).join('、')}）`);
+    const part = Math.max(1, a.part ?? 1);
+    const total = Math.max(1, Math.ceil(c.文.length / PART_SIZE));
+    if (part > total) throw new Error(`${c.卷} 共 ${total} 段（每段约 ${PART_SIZE} 字），part=${part} 超界`);
+    return jsonText({
+      书: book.书名, 卷: c.卷, 段: `${part}/${total}`, 出处: c.维基文库页,
+      文: c.文.slice((part - 1) * PART_SIZE, part * PART_SIZE),
+    });
+  }
+
+  return jsonText({
+    书名: book.书名, 作者: book.作者, 版本: book.版本, 来源: book.来源,
+    说明: '金镜积年流派（acumYear=1）第一手经典；〔〕为馆臣注，□为四库缺字（底本如此，非脱漏）。',
+    用法: 'chapter 取整卷（提要 / 卷一…卷十 / 1–10；长卷配 part 分段）；query 全书检索（可配 chapter 缩小范围）。',
+    目录: chapters.map((c) => `${c.卷}（${c.字数} 字${c.字数 > PART_SIZE ? `，${Math.ceil(c.字数 / PART_SIZE)} 段` : ''}）`),
+  });
+}
+
 // ── 远程：kintaiyi 全解释盘（键目录 + 键过滤） ────────────────
 
 function pickKeys(data: Record<string, unknown>, keys: string[]): { picked: Record<string, unknown>; missing: string[] } {

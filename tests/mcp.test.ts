@@ -27,15 +27,40 @@ const textOf = (r: ToolResult): string => r.content[0].text;
 afterEach(() => vi.unstubAllGlobals());
 
 describe('taiyi MCP server', () => {
-  it('注册全部 13 个工具', async () => {
+  it('注册全部 14 个工具', async () => {
     const client = await connect();
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
       'huangji_calendar', 'kintaiyi_docs', 'kintaiyi_life', 'kintaiyi_liu', 'kintaiyi_pan',
-      'taiyi_chart', 'taiyi_history_examples', 'taiyi_knowledge', 'taiyi_mingfa',
+      'taiyi_chart', 'taiyi_classics', 'taiyi_history_examples', 'taiyi_knowledge', 'taiyi_mingfa',
       'taiyi_mishu', 'taiyi_status', 'taiyi_tenjing', 'yijing_text',
     ].sort());
+  });
+
+  it('taiyi_classics：目录 / 取卷（中文与数字卷号）/ 检索 / 分段越界', async () => {
+    const client = await connect();
+    // 目录
+    const dir = JSON.parse(textOf(await call(client, 'taiyi_classics')));
+    expect(dir.书名).toBe('太乙金鏡式經');
+    expect(dir.目录).toHaveLength(11); // 提要 + 十卷
+    // 取卷（中文卷号）
+    const v1 = JSON.parse(textOf(await call(client, 'taiyi_classics', { chapter: '卷一' })));
+    expect(v1.文).toContain('推上元積年');
+    expect(v1.文).toContain('王希明');
+    // 数字卷号 → 卷三
+    const v3 = JSON.parse(textOf(await call(client, 'taiyi_classics', { chapter: '3' })));
+    expect(v3.卷).toBe('卷三');
+    // 提要
+    const ty = JSON.parse(textOf(await call(client, 'taiyi_classics', { chapter: '提要' })));
+    expect(ty.文).toContain('太乙金鏡式經十卷唐王希明撰');
+    // 全书检索
+    const q = JSON.parse(textOf(await call(client, 'taiyi_classics', { query: '推上元積年' })));
+    expect(q.命中).toBeGreaterThan(0);
+    expect(q.行[0].卷).toBeTruthy();
+    // 分段越界
+    const err = await call(client, 'taiyi_classics', { chapter: '卷十', part: 99 });
+    expect(err.isError).toBe(true);
   });
 
   it('taiyi_chart：本地排盘含 meta/analysisContext/秘書斷辭/周易附录，sex 附命法', async () => {

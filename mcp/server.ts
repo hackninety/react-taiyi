@@ -119,6 +119,20 @@ export function createTaiyiMcpServer(): McpServer {
   );
 
   server.tool(
+    'taiyi_classics',
+    '太乙经典原文库（本地数据，维基文库四庫全書本公版）：《太乙金鏡式經》（唐·王希明）四库提要+全十卷。'
+    + '金镜积年流派（acumYear=1）断盘的第一手经典——推积年/太岁/天目/计神诸法、阴阳二遁、八门用法皆出此书。'
+    + '不带参数返回目录；chapter 取整卷（长卷用 part 分段）；query 全书检索（返回命中行与卷次）。'
+    + '〔〕为四库馆臣注，□为底本缺字。',
+    {
+      chapter: z.string().optional().describe('取整卷：提要 / 卷一…卷十（或 1–10）'),
+      query: z.string().optional().describe('全书检索关键词（可配 chapter 缩小范围）'),
+      part: z.number().int().min(1).optional().describe('长卷分段号（约 8000 字/段，配合 chapter 用）'),
+    },
+    (a) => wrap(() => T.classics(a))(),
+  );
+
+  server.tool(
     'kintaiyi_pan',
     'kintaiyi 全解释盘（后端直出《太乙統宗寶鑑》诸卷 97 键釋文：值宿断事/断法解释/釋格局全文/九星贵神/五運六氣五音/'
     + '統運卷十二/卦象卷十三/行支編年卷十四/分野卷八/軌運卷九/州國災變卷十一/十精雲氣卷十八/军事三卷/運籌博弈）。'

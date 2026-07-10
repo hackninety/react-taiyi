@@ -84,6 +84,7 @@ JSON」升级为「排盘 → 查局断辞 → 按需取釋文 → 史例互证 
 | `taiyi_chart` | **排盘主入口**（本地引擎）：meta 口径 / analysisContext 要点 / 盘面 / 《太乙秘書》局断 / 周易经文附录；可选命法（sex）与真太阳时（经度） |
 | `taiyi_mingfa` / `huangji_calendar` | 太乙命法（本地）；皇极经世历（一元全跨度，本地，黄畿派） |
 | `taiyi_mishu` / `yijing_text` / `taiyi_tenjing` / `taiyi_knowledge` | 《太乙秘書》144 局断辞 / 周易卦爻辞原文 / 十精七曜落位 / 判读规则速查（全本地、零网络） |
+| `taiyi_classics` | 经典原文库（本地）：《太乙金鏡式經》（唐·王希明，四庫全書本）提要+全十卷——金镜流派第一手经典；目录 / 取卷（分段）/ 全书检索 |
 | `kintaiyi_pan` / `kintaiyi_life` | 后端透传《統宗寶鑑》诸卷 97 键 / 命法卷二十 59 键——**不带 keys 先返回键目录（含体积），再按 keys 取键**，防上下文爆量 |
 | `kintaiyi_liu` / `taiyi_history_examples` / `kintaiyi_docs` / `taiyi_status` | 流卦運多期 / 局數史例（67 例） / 上游文档（query 行过滤） / 引擎与后端状态 |
 
@@ -102,6 +103,7 @@ claude mcp add taiyi -- npx tsx D:\WWW\react-taiyi\mcp\main.ts
 |---|---|
 | [kentang2017/kintaiyi](https://github.com/kentang2017/kintaiyi)（MIT） | 主要移植蓝本：积年积算、七十二局表、十六神、主客定算三将、格局、八门、神煞；并作为黄金用例参考实现。经 [python-taiyi](https://github.com/hackninety/python-taiyi) 后端**直接运行其源码**（后端优先数据源 + 原生圆盘 SVG），随上游更新。另移植其 `taiyimishu`（《太乙秘書》144 局断辞，见 `scripts/gen_mishu.py`） |
 | [Chinese Text Project (ctext.org)](https://ctext.org/book-of-changes) | 《周易》通行本卦辞/爻辞公版经文源（`scripts/gen_yijing.py` 抓取生成 `src/taiyi/yijing.ts`，卦符逐卦核验；用于 AI 导出经文附录反幻觉） |
+| [维基文库](https://zh.wikisource.org/wiki/太乙金鏡式經_(四庫全書本)) | 《太乙金鏡式經》（唐·王希明，四庫全書本）公版全文（`scripts/gen_jinjing.py` 生成 `mcp/data/jinjing.json`，供 MCP 工具 `taiyi_classics`；金镜流派第一手经典） |
 | [hhszzzz/taibu](https://github.com/hhszzzz/taibu) | 工程架构参考（domain 分层）；其“太乙”为九星简化视角，未采用 |
 | [dglijin-oss/taiyi-skill](https://github.com/dglijin-oss/taiyi-skill) | 格局解读规则参考 |
 | [yhys-core / react-yhys](https://github.com/hackninety/react-yhys)（姊妹项目，git 依赖引用） | 皇极经世历：元会运世层级、先天六十卦序、黄畿派岁卦（已校订原文；祝泌派未校订、已关闭），及黄畿岁以下月经/旬纬/日/时经卦（岁卦逐层变爻·挨卦，`getSolarTerm().huangji.dayOfYear` 冬至换岁定位）。作为 npm 包直接引用，随上游更新 |

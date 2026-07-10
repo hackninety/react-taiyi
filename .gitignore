@@ -5,3 +5,5 @@ dist/
 .DS_Store
 # ctext 抓取缓存（周易经文，可由 scripts/gen_yijing.py 重新抓取再生）
 scripts/.yijing_cache/
+# 维基文库抓取缓存（太乙金鏡式經，可由 scripts/gen_jinjing.py 重新抓取再生）
+scripts/.jinjing_cache/
