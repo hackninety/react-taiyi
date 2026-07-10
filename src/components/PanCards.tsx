@@ -1,9 +1,13 @@
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { PanData } from '../taiyi/pan';
 import { PAN_GROUPS } from '../taiyi/pan';
 
 /**
  * kintaiyi 全解释盘渲染：上游 pan() 中文键直出，通用递归渲染器 + 主题分组卡。
  * 值形态（经后端 JSON 安全化）：str / number / list / 嵌套 dict（≤3 层）。
+ * 分组以卡片列出，点击弹出模态框（背景模糊、点击背景关闭）展示全文——
+ * 避免长释文/JSON 在网格列内被截断。
  */
 
 function isEmpty(v: unknown): boolean {
@@ -66,6 +70,37 @@ interface Props {
 }
 
 export function PanCards({ state, unavailableNote, extras }: Props) {
+  const [openTitle, setOpenTitle] = useState<string | null>(null);
+
+  const data: PanData | null = state.phase === 'ok' ? state.data : null;
+
+  // 数据换代（重新排盘）时关闭遗留模态框，避免旧弹窗随新数据到达自动重弹
+  useEffect(() => { setOpenTitle(null); }, [data]);
+
+  // 仅列出有内容的分组
+  const groups = data
+    ? PAN_GROUPS
+        .map((g) => ({ g, present: g.keys.filter((k) => !isEmpty(data[k])) }))
+        .filter((x) => x.present.length > 0)
+    : [];
+
+  const active = openTitle ? groups.find((x) => x.g.title === openTitle) ?? null : null;
+  // 稳定字符串依赖（active 每次渲染都是新对象）：分组消失时也会切回 null 从而解锁
+  const activeTitle = active ? active.g.title : null;
+
+  // 打开时：ESC 关闭 + 锁定背景滚动
+  useEffect(() => {
+    if (!activeTitle) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenTitle(null); };
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [activeTitle]);
+
   return (
     <section className="card pan-wrap">
       <h3>
@@ -79,28 +114,48 @@ export function PanCards({ state, unavailableNote, extras }: Props) {
       )}
       {state.phase === 'ok' && (
         <div className="pan-groups">
-          {PAN_GROUPS.map((g) => {
-            const present = g.keys.filter((k) => !isEmpty(state.data[k]));
-            if (present.length === 0) return null;
-            return (
-              <details key={g.title} className="pan-group">
-                <summary>
-                  {g.title}
-                  <em>{g.note}</em>
-                </summary>
-                <div className="pan-body">
-                  {extras?.[g.title]}
-                  {present.map((k) => (
-                    <div key={k} className="pan-item">
-                      {(present.length > 1 || k !== g.title) && <h4>{k}</h4>}
-                      <PanValue v={state.data[k]} />
-                    </div>
-                  ))}
-                </div>
-              </details>
-            );
-          })}
+          {groups.map(({ g }) => (
+            <button
+              key={g.title}
+              type="button"
+              className="pan-group"
+              onClick={() => setOpenTitle(g.title)}
+            >
+              <span className="pan-group-title">{g.title}</span>
+              <em>{g.note}</em>
+            </button>
+          ))}
         </div>
+      )}
+      {active && data && createPortal(
+        <div
+          className="pan-modal-backdrop"
+          onClick={() => setOpenTitle(null)}
+          role="presentation"
+        >
+          <div
+            className="pan-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={active.g.title}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="pan-modal-head">
+              <span className="pan-modal-title">{active.g.title}</span>
+              <em>{active.g.note}</em>
+            </div>
+            <div className="pan-body">
+              {extras?.[active.g.title]}
+              {active.present.map((k) => (
+                <div key={k} className="pan-item">
+                  {(active.present.length > 1 || k !== active.g.title) && <h4>{k}</h4>}
+                  <PanValue v={data[k]} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
     </section>
   );
