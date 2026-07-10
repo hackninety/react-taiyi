@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ExportPayload } from '../taiyi';
 import { toJSONText, toMarkdown } from '../taiyi';
 import { generateAIPrompt } from '../lib/prompt';
+import { KNOWLEDGE_APPENDIX } from '../lib/knowledge';
 import { useToast } from './Toast';
 
 interface Props {
@@ -69,9 +70,16 @@ function download(filename: string, text: string, mime: string) {
 export function ExportCard({ payload }: Props) {
   const toast = useToast();
   const [tier, setTier] = useState<Tier>('full');
+  // 附判读规则速查：给不熟太乙术语的通用模型兜底（仅影响 AI Prompt）
+  const [withRules, setWithRules] = useState(false);
 
   const effective = useMemo(() => (tier === 'lite' ? stripHeavy(payload) : payload), [tier, payload]);
   const json = useMemo(() => toJSONText(effective), [effective]);
+
+  const buildPrompt = () => {
+    const base = generateAIPrompt(effective);
+    return withRules ? `${base}\n\n${KNOWLEDGE_APPENDIX}` : base;
+  };
 
   // 两档体积对照（字节 + 估算 token），供选择
   const sizes = useMemo(() => {
@@ -163,11 +171,15 @@ export function ExportCard({ payload }: Props) {
         <button
           type="button"
           className="btn-crimson"
-          onClick={() => doCopy(generateAIPrompt(effective), 'AI 分析 Prompt 已复制！粘贴给 ChatGPT / Claude 即可')}
+          onClick={() => doCopy(buildPrompt(), 'AI 分析 Prompt 已复制！粘贴给 ChatGPT / Claude 即可')}
         >
           ✦ 一键复制 AI Prompt
         </button>
       </div>
+      <label className="rules-toggle">
+        <input type="checkbox" checked={withRules} onChange={(e) => setWithRules(e.target.checked)} />
+        AI Prompt 附「判读规则速查」（十六神/算数属性/格局条件/八门神煞通则，供不熟太乙术语的通用模型兜底）
+      </label>
       <div className="json-preview">
         <pre>{json.slice(0, 2000)}{json.length > 2000 ? '\n…' : ''}</pre>
       </div>

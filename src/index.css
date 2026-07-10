@@ -851,6 +851,19 @@ body {
 
 .tier-note.single { margin-top: 12px; }
 
+.rules-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.rules-toggle input { margin-top: 2px; flex: 0 0 auto; cursor: pointer; }
+
 .export-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
