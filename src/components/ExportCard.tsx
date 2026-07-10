@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { ExportPayload } from '../taiyi';
-import { toJSONText, toMarkdown } from '../taiyi';
+import { toTOONText, toMarkdown } from '../taiyi';
 import { generateAIPrompt } from '../lib/prompt';
 import { KNOWLEDGE_APPENDIX } from '../lib/knowledge';
 import { useToast } from './Toast';
@@ -74,7 +74,8 @@ export function ExportCard({ payload }: Props) {
   const [withRules, setWithRules] = useState(false);
 
   const effective = useMemo(() => (tier === 'lite' ? stripHeavy(payload) : payload), [tier, payload]);
-  const json = useMemo(() => toJSONText(effective), [effective]);
+  // TOON 格式（github.com/toon-format/toon）：语义等价 JSON、面向 LLM 省 token（实测全量约省 1/3）
+  const toon = useMemo(() => toTOONText(effective), [effective]);
 
   const buildPrompt = () => {
     const base = generateAIPrompt(effective);
@@ -84,8 +85,8 @@ export function ExportCard({ payload }: Props) {
   // 两档体积对照（字节 + 估算 token），供选择
   const sizes = useMemo(() => {
     const enc = new TextEncoder();
-    const full = toJSONText(payload);
-    const lite = toJSONText(stripHeavy(payload));
+    const full = toTOONText(payload);
+    const lite = toTOONText(stripHeavy(payload));
     return {
       full: { bytes: enc.encode(full).length, tokens: estimateTokens(full) },
       lite: { bytes: enc.encode(lite).length, tokens: estimateTokens(lite) },
@@ -156,11 +157,11 @@ export function ExportCard({ payload }: Props) {
       )}
 
       <div className="export-grid">
-        <button type="button" className="btn-outline" onClick={() => { download(`${stamp()}.json`, json, 'application/json'); toast('JSON 文件已下载'); }}>
-          ⤓ 导出 JSON 文件
+        <button type="button" className="btn-outline" onClick={() => { download(`${stamp()}.toon`, toon, 'text/plain'); toast('TOON 文件已下载'); }}>
+          ⤓ 导出 TOON 文件
         </button>
-        <button type="button" className="btn-outline" onClick={() => doCopy(json, 'JSON 已复制到剪贴板')}>
-          ⧉ 复制 JSON
+        <button type="button" className="btn-outline" onClick={() => doCopy(toon, 'TOON 已复制到剪贴板')}>
+          ⧉ 复制 TOON
         </button>
         <button type="button" className="btn-outline" onClick={() => doCopy(toMarkdown(effective), 'Markdown 已复制到剪贴板')}>
           ⧉ 复制 Markdown
@@ -181,7 +182,7 @@ export function ExportCard({ payload }: Props) {
         AI Prompt 附「判读规则速查」（十六神/算数属性/格局条件/八门神煞通则，供不熟太乙术语的通用模型兜底）
       </label>
       <div className="json-preview">
-        <pre>{json.slice(0, 2000)}{json.length > 2000 ? '\n…' : ''}</pre>
+        <pre>{toon.slice(0, 2000)}{toon.length > 2000 ? '\n…' : ''}</pre>
       </div>
     </section>
   );

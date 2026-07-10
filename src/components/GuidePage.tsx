@@ -64,12 +64,12 @@ const SECTIONS: Section[] = [
           <li><strong>kintaiyi 全解釋</strong>：后端直出上游《太乙統宗寶鑑》诸卷释文（16 组：值宿断事、
             断法解释、明所主术、釋格局全文、九星贵神、五運六氣五音、統運卷十二、卦象總述與動爻辭卷十三、
             行支編年、分野、軌運、州國災變、十精雲氣、军事三卷、金函玉鏡、運籌博弈 Nash 分析），
-            随上游更新，并整体并入 JSON 导出（kintaiyiPan 字段）供 AI 引用。</li>
+            随上游更新，并整体并入结构化导出（kintaiyiPan 字段）供 AI 引用。</li>
           <li>选择<strong>计式</strong>（问什么用什么计，见下节）与<strong>积年法</strong>（不确定就用默认的太乙统宗）。</li>
           <li>可选项：出生地/所在地在西部或东部时勾选<strong>真太阳时</strong>；想看七曜落位勾<strong>十精</strong>；
             排个人命盘勾<strong>命法</strong>并选男女。</li>
           <li>盘面即时生成：左侧是十六神式盘（红框红光处即太乙所在），右侧是局式、主客定算、格局、神煞与卦。</li>
-          <li>页面底部「数据导出 · AI 分析」可复制 JSON / Markdown，或<strong>一键复制 AI Prompt</strong>
+          <li>页面底部「数据导出 · AI 分析」可复制 TOON（面向 AI 的省 token 结构化格式）/ Markdown，或<strong>一键复制 AI Prompt</strong>
             粘贴给 ChatGPT / Claude 做深入分析。</li>
         </ol>
       </>

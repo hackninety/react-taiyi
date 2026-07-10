@@ -2,7 +2,14 @@
  * 太乙神数 AI 分析提示词模板（结构参照 react-8char 的 prompt-template）。
  */
 import type { ExportPayload } from '../taiyi';
-import { toJSONText } from '../taiyi';
+import { toTOONText } from '../taiyi';
+
+/** TOON 数据格式说明（内嵌数据为 TOON 而非 JSON，向 AI 说明一次） */
+const TOON_NOTE =
+  '**数据格式说明**：下方数据为 TOON 格式（github.com/toon-format/toon，面向 LLM 的紧凑结构化文本，'
+  + '语义与 JSON 等价、字段路径一致）——缩进表示层级；`键[N]:` 为 N 元素数组；'
+  + '`键[N]{字段,…}:` 为表格数组，其后每行一条按字段顺序逗号分隔的记录；字符串仅在含特殊字符时加引号。'
+  + '字段引用写法与 JSON 相同（如 `meta.太乙积年流派`、`result.yearGua`、`kintaiyiPan.卷十二`）。';
 
 /** 占类 → 分析侧重指引（与 InputPanel INQUIRY_TOPICS 对应；未知占类回退通盘） */
 const TOPIC_EMPHASIS: Record<string, string> = {
@@ -22,13 +29,15 @@ function inquiryBlock(payload: ExportPayload): string {
 }
 
 /** 仅皇极模式（起局年份超出太乙历法范围）：单独的元会运世分析提示词 */
-function generateHuangjiOnlyPrompt(payload: ExportPayload, jsonStr: string): string {
+function generateHuangjiOnlyPrompt(payload: ExportPayload, toonStr: string): string {
   return `你是一位精通邵雍《皇极经世书》元会运世体系的资深易学分析师。请根据以下推算数据，对该年份所处的历史周期与卦运大势进行深入分析。
 
-**阅读顺序（重要）**：请先读 JSON 顶部的 \`meta\`（口径明细）——尤其**皇极岁卦流派**（黄畿派，已对照原文校验；祝泌派未校订、本应用已关闭不用），全程锁定该口径；再读 \`analysisContext.皇极大势\`；最后以 \`huangji\` 原始字段核对展开。本次起局年份超出太乙历法验证范围（公元 600–9999），故无太乙主盘，仅推皇极经世历（一元全跨度：公元前 67016 — 公元 62583）。
+**阅读顺序（重要）**：请先读数据顶部的 \`meta\`（口径明细）——尤其**皇极岁卦流派**（黄畿派，已对照原文校验；祝泌派未校订、本应用已关闭不用），全程锁定该口径；再读 \`analysisContext.皇极大势\`；最后以 \`huangji\` 原始字段核对展开。本次起局年份超出太乙历法验证范围（公元 600–9999），故无太乙主盘，仅推皇极经世历（一元全跨度：公元前 67016 — 公元 62583）。
 ${inquiryBlock(payload)}
-\`\`\`json
-${jsonStr}
+${TOON_NOTE}
+
+\`\`\`toon
+${toonStr}
 \`\`\`
 
 ## 第一步 · 事实清单（务必先做）
@@ -59,12 +68,12 @@ ${jsonStr}
 - 凡引用卦爻辞，已与 \`yijingRefs\` 原文逐字核对、未张冠李戴
 - 凡缺乏推算数据支撑的断语，已标注为「据传统象义的推演」
 
-要求：分析须引用 JSON 中的具体数据作为论据（会/运/世序号、卦名、变爻），术语须配通俗解释；古远年份的公历日期为拟推格里历，民用历日可能有出入，分析以年为主。皇极经世属传统易学文化，请以文化研究视角推演。`;
+要求：分析须引用数据中的具体字段值作为论据（会/运/世序号、卦名、变爻），术语须配通俗解释；古远年份的公历日期为拟推格里历，民用历日可能有出入，分析以年为主。皇极经世属传统易学文化，请以文化研究视角推演。`;
 }
 
 export function generateAIPrompt(payload: ExportPayload): string {
-  const jsonStr = toJSONText(payload);
-  if (!payload.result) return generateHuangjiOnlyPrompt(payload, jsonStr);
+  const toonStr = toTOONText(payload);
+  if (!payload.result) return generateHuangjiOnlyPrompt(payload, toonStr);
   const hasMingfa = Boolean(payload.mingfa);
   const hasPlanets = Boolean(payload.planets);
   const hasHuangji = Boolean(payload.huangji);
@@ -80,12 +89,14 @@ export function generateAIPrompt(payload: ExportPayload): string {
 
   return `你是一位精通太乙神数（三式之首）的资深术数分析师，谙熟《太乙金镜式经》《太乙统宗宝鉴》诸典。请根据以下排盘数据进行深入、专业的推演分析。
 ${inquiryBlock(payload)}
-**阅读顺序（重要）**：请先读 JSON 顶部的 \`meta\`（口径明细）——尤其**太乙积年流派**${hasHuangji ? '与**皇极岁卦流派**' : ''}，不同流派积数/起卦口径不同、结果不可混用，请全程锁定该口径；再读 \`analysisContext\`（程序预先归集的断事要点，作为抓手）；最后深入 \`result\`${hasMingfa ? '、\`mingfa\`' : ''}${hasPlanets ? '、\`tenJing\`' : ''}${hasHuangji ? '、\`huangji\`' : ''} 等原始字段核对与展开。\`mishuText\` 为《太乙秘書》對本局的經典總斷（每局權威斷辭：利主利客、出軍方位、陣法旗色、雲氣、伏兵時辰），主客勝負與趨避推演請以此為綱、與盤面數據互證——吻合處引為據，出入處說明盤面依據。若含 \`kintaiyiPan\` 字段（kintaiyi 全解释盘，繁体中文键为上游《太乙統宗寶鑑》原样），其值宿断事/断法释文/釋格局/統運（卷十二）/卦象（卷十三）/军事诸卷/運籌博弈分析是断事的第一手釋文依据，请充分引用。${hasLife ? '若含 `kintaiyiLife` 字段（命法卷二十上游直出釋文：安命安身宮、飛祿飛馬黑符、十提金賦、十二宮星斷、雙星同宮論、諸星上中下三等），這是命理人事断的第一手釋文，命法部分请优先引用其原文。' : ''}若含 \`historyExamples\` 字段（该年份的古籍史例纪事与史載局數），请将盘面结论与史载事件互证并明确指出吻合或出入之处。若含 \`liuTimelines\` 字段（流年/流月/流日/流時/流分多期直卦序列，首期即起局时刻），请据以展开近期走势与流年推演——但须知这是**命法流卦（自出身卦挨步，随起局四柱含时辰呈相位变化，非全年恒定）**，规范且全年不变的年運卦是 \`result.yearGua\`（值年卦），论流年以值年卦为纲、流卦運相位为辅，勿把相位卦当作规范年卦；\`residence\` 为命主常居住地（不参与排盘，作人事断的方位地缘参照）；\`solarTime\` 标注了输入时间的解释时区与真太阳时校正明细；\`mingfa\` 中 yangjiuXingxian/bailiuXingxian 即大限（阳九/百六行限）全表，请结合当前虚岁点出所行之限。
+**阅读顺序（重要）**：请先读数据顶部的 \`meta\`（口径明细）——尤其**太乙积年流派**${hasHuangji ? '与**皇极岁卦流派**' : ''}，不同流派积数/起卦口径不同、结果不可混用，请全程锁定该口径；再读 \`analysisContext\`（程序预先归集的断事要点，作为抓手）；最后深入 \`result\`${hasMingfa ? '、\`mingfa\`' : ''}${hasPlanets ? '、\`tenJing\`' : ''}${hasHuangji ? '、\`huangji\`' : ''} 等原始字段核对与展开。\`mishuText\` 为《太乙秘書》對本局的經典總斷（每局權威斷辭：利主利客、出軍方位、陣法旗色、雲氣、伏兵時辰），主客勝負與趨避推演請以此為綱、與盤面數據互證——吻合處引為據，出入處說明盤面依據。若含 \`kintaiyiPan\` 字段（kintaiyi 全解释盘，繁体中文键为上游《太乙統宗寶鑑》原样），其值宿断事/断法释文/釋格局/統運（卷十二）/卦象（卷十三）/军事诸卷/運籌博弈分析是断事的第一手釋文依据，请充分引用。${hasLife ? '若含 `kintaiyiLife` 字段（命法卷二十上游直出釋文：安命安身宮、飛祿飛馬黑符、十提金賦、十二宮星斷、雙星同宮論、諸星上中下三等），這是命理人事断的第一手釋文，命法部分请优先引用其原文。' : ''}若含 \`historyExamples\` 字段（该年份的古籍史例纪事与史載局數），请将盘面结论与史载事件互证并明确指出吻合或出入之处。若含 \`liuTimelines\` 字段（流年/流月/流日/流時/流分多期直卦序列，首期即起局时刻），请据以展开近期走势与流年推演——但须知这是**命法流卦（自出身卦挨步，随起局四柱含时辰呈相位变化，非全年恒定）**，规范且全年不变的年運卦是 \`result.yearGua\`（值年卦），论流年以值年卦为纲、流卦運相位为辅，勿把相位卦当作规范年卦；\`residence\` 为命主常居住地（不参与排盘，作人事断的方位地缘参照）；\`solarTime\` 标注了输入时间的解释时区与真太阳时校正明细；\`mingfa\` 中 yangjiuXingxian/bailiuXingxian 即大限（阳九/百六行限）全表，请结合当前虚岁点出所行之限。
 
-数据说明：JSON 含计式与积年流派、积数、局式（阴阳遁/七十二局/理天地人）、太乙落宫、文昌始击定目、计神合神、主客定三算与大将参将、十六神式盘落位、八门值事与分布、格局（掩迫关囚击格对提挟执提四郭固杜）、君臣民基等神煞、阳九百六、值年日时卦${hasMingfa ? '、太乙命法（命法积数/三才数/十二命宫/阳九百六行限/流年卦链）' : ''}${hasPlanets ? '、十精七曜落位' : ''}${hasHuangji ? '、皇极经世历（元会运世定位与辟卦/运卦/世卦/十年卦/岁卦/月日时卦，可与太乙局象互参大时代背景）' : ''}，请充分利用所有字段。
+数据说明：数据含计式与积年流派、积数、局式（阴阳遁/七十二局/理天地人）、太乙落宫、文昌始击定目、计神合神、主客定三算与大将参将、十六神式盘落位、八门值事与分布、格局（掩迫关囚击格对提挟执提四郭固杜）、君臣民基等神煞、阳九百六、值年日时卦${hasMingfa ? '、太乙命法（命法积数/三才数/十二命宫/阳九百六行限/流年卦链）' : ''}${hasPlanets ? '、十精七曜落位' : ''}${hasHuangji ? '、皇极经世历（元会运世定位与辟卦/运卦/世卦/十年卦/岁卦/月日时卦，可与太乙局象互参大时代背景）' : ''}，请充分利用所有字段。
 
-\`\`\`json
-${jsonStr}
+${TOON_NOTE}
+
+\`\`\`toon
+${toonStr}
 \`\`\`
 
 ## 第一步 · 盘面事实清单（务必先做，不得跳过）
@@ -149,5 +160,5 @@ ${hasLife ? '- 逐条引用 kintaiyiLife 卷二十釋文断人事：命身宫所
 - 凡引用卦爻辞，已与 \`yijingRefs\` 原文逐字核对、未张冠李戴
 - 凡缺乏盘面数据支撑的断语，已明确标注为「据传统象义的推演」而非盘面结论
 
-要求：分析须引用 JSON 中的具体数据作为论据（如局数、算数、落宫），在使用专业术语的同时给出通俗易懂的解释；始终锁定 meta 指定的流派口径，勿与其他流派数据交叉。太乙神数属传统术数文化，请以文化研究视角进行推演。`;
+要求：分析须引用数据中的具体字段值作为论据（如局数、算数、落宫），在使用专业术语的同时给出通俗易懂的解释；始终锁定 meta 指定的流派口径，勿与其他流派数据交叉。太乙神数属传统术数文化，请以文化研究视角进行推演。`;
 }

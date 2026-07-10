@@ -11,10 +11,12 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { encode } from '@toon-format/toon';
+import type { JsonValue } from '@toon-format/toon';
 import {
   calculateTaiyi, calculateMingfa, calculateHuangji, applyTrueSolarTime,
   TAIYI_MIN_YEAR, TAIYI_MAX_YEAR, HUANGJI_MIN_YEAR, HUANGJI_MAX_YEAR,
-  toJSONText, findStars, starsLoaded,
+  toTOONText, findStars, starsLoaded,
 } from '../src/taiyi';
 import type { AcumYear, ExportPayload, JiStyle, Sex, SolarTimeInfo, TaiyiInput } from '../src/taiyi';
 import { setStarsData } from '../src/taiyi/tenjing';
@@ -52,7 +54,8 @@ async function withSignal<T>(ms: number, fn: (signal: AbortSignal) => Promise<T>
   }
 }
 
-const jsonText = (v: unknown): string => JSON.stringify(v, null, 2);
+/** 工具结果统一 TOON 格式（语义等价 JSON、省 token；server instructions 已向 AI 说明格式） */
+const toonText = (v: unknown): string => encode(v as JsonValue);
 const sizeOf = (v: unknown): string => {
   const n = Buffer.byteLength(JSON.stringify(v), 'utf8');
   return n >= 1024 ? `${(n / 1024).toFixed(1)}KB` : `${n}B`;
@@ -100,7 +103,7 @@ export function chart(a: ChartArgs): string {
     ? calculateHuangji(effective.year, { month: effective.month, day: effective.day, hour: effective.hour })
     : null;
   const payload: ExportPayload = { result, mingfa, huangji, solarTime };
-  return toJSONText(payload);
+  return toTOONText(payload);
 }
 
 // ── 本地：命法 ────────────────────────────────────────────────
@@ -110,7 +113,7 @@ export function mingfa(a: { year: number; month: number; day: number; hour: numb
     throw new Error(`命法依标准历法，年份须在 ${TAIYI_MIN_YEAR}–${TAIYI_MAX_YEAR}`);
   }
   const input: TaiyiInput = { year: a.year, month: a.month, day: a.day, hour: a.hour, minute: a.minute, jiStyle: 3, acumYear: 0 };
-  return jsonText(calculateMingfa(input, a.sex as Sex));
+  return toonText(calculateMingfa(input, a.sex as Sex));
 }
 
 // ── 本地：皇极经世历 ─────────────────────────────────────────
@@ -128,7 +131,7 @@ export function huangji(a: { year: number; month?: number; day?: number; hour?: 
     huangji: info,
     huangjiOnlyInput: { year: a.year, month, day, hour, minute: 0 },
   };
-  return toJSONText(payload);
+  return toTOONText(payload);
 }
 
 // ── 本地：《太乙秘書》局断辞 ─────────────────────────────────
@@ -137,7 +140,7 @@ export function mishu(a: { dun: string; num: number }): string {
   const dun = (a.dun.replace('阳', '陽').replace('阴', '陰').replace(/遁$/, '')) as Dun;
   const entry = getMishu(dun, a.num);
   if (!entry) throw new Error(`查无此局：${a.dun} 第 ${a.num} 局（dun 取 陽/陰，num 取 1–72）`);
-  return jsonText({ 出處: `《太乙秘書》${dun}遁第 ${a.num} 局`, 五元干支: entry.ganzhi, 斷辭: entry.text });
+  return toonText({ 出處: `《太乙秘書》${dun}遁第 ${a.num} 局`, 五元干支: entry.ganzhi, 斷辭: entry.text });
 }
 
 // ── 本地：周易经文 ───────────────────────────────────────────
@@ -148,7 +151,7 @@ export function yijing(a: { names: string[] }): string {
     if (!h) return { 查询: name, 未找到: '卦名无法识别（可用繁/简体卦名或卦符 ䷀–䷿）' };
     return { 查询: name, 卦: h.name, 符: h.symbol, 卦辞: h.guaCi, 爻辞: h.yao.map((y) => `${y.name}：${y.text}`) };
   });
-  return jsonText(out);
+  return toonText(out);
 }
 
 // ── 本地：十精七曜 ───────────────────────────────────────────
@@ -160,7 +163,7 @@ export async function tenjing(a: { year: number; month: number; day: number }): 
   }
   const stars = findStars(a.year, a.month, a.day);
   if (!stars) throw new Error('该日期无十精数据（预计算表范围外）');
-  return jsonText({ 说明: '地支 → 所落七曜（日/月/辰星/太白/熒惑/歲星/填星）', 落位: stars });
+  return toonText({ 说明: '地支 → 所落七曜（日/月/辰星/太白/熒惑/歲星/填星）', 落位: stars });
 }
 
 // ── 本地：判读规则速查 ───────────────────────────────────────
@@ -207,8 +210,8 @@ export async function classics(a: { chapter?: string; query?: string; part?: num
         hits.push({ 卷: c.卷, 行: i + 1, 文: t.length > 240 ? `${t.slice(0, 240)}……` : t });
       });
     }
-    if (!hits.length) return jsonText({ 书: book.书名, 检索: q, 命中: 0 });
-    return jsonText({
+    if (!hits.length) return toonText({ 书: book.书名, 检索: q, 命中: 0 });
+    return toonText({
       书: book.书名, 检索: q, 命中: hits.length,
       ...(hits.length > 30 ? { 提示: '仅显示前 30 行；可加 chapter 缩小范围' } : {}),
       行: hits.slice(0, 30),
@@ -221,13 +224,13 @@ export async function classics(a: { chapter?: string; query?: string; part?: num
     const part = Math.max(1, a.part ?? 1);
     const total = Math.max(1, Math.ceil(c.文.length / PART_SIZE));
     if (part > total) throw new Error(`${c.卷} 共 ${total} 段（每段约 ${PART_SIZE} 字），part=${part} 超界`);
-    return jsonText({
+    return toonText({
       书: book.书名, 卷: c.卷, 段: `${part}/${total}`, 出处: c.维基文库页,
       文: c.文.slice((part - 1) * PART_SIZE, part * PART_SIZE),
     });
   }
 
-  return jsonText({
+  return toonText({
     书名: book.书名, 作者: book.作者, 版本: book.版本, 来源: book.来源,
     说明: '金镜积年流派（acumYear=1）第一手经典；〔〕为馆臣注，□为四库缺字（底本如此，非脱漏）。',
     用法: 'chapter 取整卷（提要 / 卷一…卷十 / 1–10；长卷配 part 分段）；query 全书检索（可配 chapter 缩小范围）。',
@@ -255,9 +258,9 @@ export async function panRemote(a: { year: number; month: number; day: number; h
   const resp = await withSignal(30000, (s) => fetchPan(toRemoteInput(input), apiBase(), true, s));
   if (!a.keys?.length) {
     const grouped = new Set(PAN_GROUPS.flatMap((g) => g.keys));
-    return jsonText({
+    return toonText({
       上游: resp.ref,
-      提示: '全解释盘约 90KB，已按主题列出键目录（含体积）；请再次调用并以 keys 选取所需键（可跨分组多选）。',
+      提示: '全解释盘体量大，已按主题列出键目录（含体积）；请再次调用并以 keys 选取所需键（可跨分组多选）。',
       分组: PAN_GROUPS
         .map((g) => ({
           分组: g.title,
@@ -269,7 +272,7 @@ export async function panRemote(a: { year: number; month: number; day: number; h
     });
   }
   const { picked, missing } = pickKeys(resp.pan, a.keys);
-  return jsonText({ 上游: resp.ref, ...(missing.length ? { 未找到键: missing } : {}), 内容: picked });
+  return toonText({ 上游: resp.ref, ...(missing.length ? { 未找到键: missing } : {}), 内容: picked });
 }
 
 // ── 远程：命法卷二十釋文（键目录 + 键过滤） ──────────────────
@@ -278,14 +281,14 @@ export async function lifeRemote(a: { year: number; month: number; day: number; 
   const input: TaiyiInput = { year: a.year, month: a.month, day: a.day, hour: a.hour, minute: a.minute, jiStyle: 3, acumYear: 0 };
   const resp = await withSignal(30000, (s) => fetchLife(toRemoteInput(input), a.sex as Sex, apiBase(), s));
   if (!a.keys?.length) {
-    return jsonText({
+    return toonText({
       上游: resp.ref,
       提示: '命法全盘约 27KB，已列键目录（含体积）；请再次调用并以 keys 选取所需键。重点釋文：十提金賦 / 十二宮星斷 / 雙星同宮論 / 諸星上中下三等 / 卷二十。',
       键: Object.keys(resp.life).map((k) => `${k} (${sizeOf(resp.life[k])})`),
     });
   }
   const { picked, missing } = pickKeys(resp.life, a.keys);
-  return jsonText({ 上游: resp.ref, ...(missing.length ? { 未找到键: missing } : {}), 内容: picked });
+  return toonText({ 上游: resp.ref, ...(missing.length ? { 未找到键: missing } : {}), 内容: picked });
 }
 
 // ── 远程：流卦運多期 ─────────────────────────────────────────
@@ -294,7 +297,7 @@ export async function liuRemote(a: { year: number; month: number; day: number; h
   if (a.year < 1) throw new Error('流卦運不支持公元前（上游 hex_timeline 依 Python datetime，下限公元 1 年）');
   const input: TaiyiInput = { year: a.year, month: a.month, day: a.day, hour: a.hour, minute: a.minute, jiStyle: 3, acumYear: 0 };
   const resp = await withSignal(30000, (s) => fetchLiu(input, apiBase(), s));
-  return jsonText({
+  return toonText({
     上游: resp.ref,
     须知: '此为命法流卦（自出身卦挨步，随起局四柱含时辰呈相位变化，非全年恒定）；规范且全年不变的年運卦是排盘 result.yearGua（值年卦），论流年以值年卦为纲、流卦相位为辅。',
     流卦運: resp.liu,
@@ -307,15 +310,15 @@ export async function historyExamples(a: { year?: number }): Promise<string> {
   const md = await withSignal(15000, (s) => fetchDoc('example', apiBase(), s));
   const rows = parseExamples(md);
   if (a.year === undefined) {
-    return jsonText({
+    return toonText({
       条数: rows.length,
       说明: '给 year（天文纪年，0=公元前1年）查该年史载纪事；下为可查年份（公元前直记）。',
       年份: rows.map((r) => r.year),
     });
   }
   const hit = matchExamples(rows, a.year);
-  if (!hit.length) return jsonText({ 年份: a.year, 命中: 0, 说明: '该年无史例记载' });
-  return jsonText({ 年份: a.year, 命中: hit.length, 史例: hit });
+  if (!hit.length) return toonText({ 年份: a.year, 命中: 0, 说明: '该年无史例记载' });
+  return toonText({ 年份: a.year, 命中: hit.length, 史例: hit });
 }
 
 // ── 远程：上游文档 ───────────────────────────────────────────
@@ -355,7 +358,7 @@ export async function status(): Promise<string> {
   } catch (e) {
     backend = { 不可用: e instanceof Error ? e.message : String(e) };
   }
-  return jsonText({
+  return toonText({
     本地引擎: {
       太乙标准历法: `公元 ${TAIYI_MIN_YEAR}–${TAIYI_MAX_YEAR}（黄金用例对照 kintaiyi）；范围外自动皇极拟推口径`,
       皇极一元全跨度: `${HUANGJI_MIN_YEAR}–${HUANGJI_MAX_YEAR}（天文纪年；黄畿派岁卦已校订原文）`,

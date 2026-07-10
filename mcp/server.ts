@@ -38,12 +38,23 @@ const jiShape = {
 const sexEnum = z.enum(['男', '女']);
 
 export function createTaiyiMcpServer(): McpServer {
-  const server = new McpServer({ name: 'taiyi', version: '0.1.0' });
+  const server = new McpServer(
+    { name: 'taiyi', version: '0.1.0' },
+    {
+      instructions:
+        '太乙神数排盘与推理工具集。结构化工具结果一律为 TOON 格式'
+        + '（github.com/toon-format/toon，语义等价 JSON：缩进=层级，`键[N]:`=N 元素数组，'
+        + '`键[N]{字段,…}:`=表格数组、其后每行一条按字段顺序逗号分隔的记录）。'
+        + '排盘先调 taiyi_chart；引用卦爻辞前先查 yijing_text 或导出内 yijingRefs；'
+        + '大体量釋文（kintaiyi_pan / kintaiyi_life）先取键目录再按 keys 精取。'
+        + '年份约定：工具输入均为天文纪年（0=公元前 1 年）。',
+    },
+  );
 
   server.tool(
     'taiyi_chart',
     '太乙神数排盘（本地引擎，公元 600–9999 经黄金用例对照 kintaiyi；范围外自动切皇极拟推口径并在 meta 标注）。'
-    + '返回完整 JSON：meta（流派口径，先读并全程锁定）、analysisContext（断事要点归集）、result（局式/太乙落宫/文昌始击/主客三算与将参/格局/八门/神煞/值卦）、'
+    + '返回完整 TOON 数据：meta（流派口径，先读并全程锁定）、analysisContext（断事要点归集）、result（局式/太乙落宫/文昌始击/主客三算与将参/格局/八门/神煞/值卦）、'
     + 'mishuText（《太乙秘書》本局经典断辞，主客胜负以此为纲）、yijingRefs（本盘出现之卦的周易经文原文）。'
     + '可选：sex 给出即附太乙命法；trueSolarLongitude 给出即做真太阳时校正。排盘请先调此工具。',
     {

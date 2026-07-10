@@ -6,7 +6,7 @@ export { buildRemoteResult } from './remoteResult';
 export { calculateMingfa } from './mingfa';
 export type { MingfaResult, Sex } from './mingfa';
 export { loadStarsData, findStars, starsLoaded } from './tenjing';
-export { toJSONText, toMarkdown } from './export';
+export { toJSONText, toTOONText, toMarkdown, buildExportObject } from './export';
 export type { ExportPayload } from './export';
 export { applyTrueSolarTime, browserTimeZone, browserTzOffsetMinutes, tzAutoLocation, CN_TZ_OFFSET_MINUTES } from './solartime';
 export type { SolarTimeInfo } from './solartime';

@@ -1,10 +1,11 @@
 /**
- * 排盘结果导出：JSON 与 Markdown（便于复制给 AI 分析或存档）。
+ * 排盘结果导出：TOON（AI 面首选，省 token）/ JSON（同构，程序互换）/ Markdown（人读+AI）。
  *
  * 为便于 AI 完整、准确地推理，导出时额外提供两块预处理信息：
  * - meta：口径明细，尤其标注**太乙积年流派**与**皇极岁卦流派**，防止多流派数据混用错乱；
  * - analysisContext：程序预先归集的断事要点，作为 AI 的推理抓手（细节仍以原始字段为准）。
  */
+import { encode } from '@toon-format/toon';
 import type { AcumYear, GongName, TaiyiResult } from './types';
 import type { MingfaResult } from './mingfa';
 import type { SolarTimeInfo } from './solartime';
@@ -327,59 +328,69 @@ export function buildYijingRefs(payload: ExportPayload) {
   return list;
 }
 
-export function toJSONText(payload: ExportPayload): string {
+/** 导出对象（JSON/TOON 共用同一结构，字段路径一致） */
+export function buildExportObject(payload: ExportPayload): Record<string, unknown> {
   const {
     result, mingfa, planets, solarTime, huangji, huangjiOnlyInput,
     kintaiyiPan, kintaiyiLife, historyExamples, liuTimelines, residence, inquiry,
   } = payload;
   const mishuEntry = result ? getMishu(result.kook.dun, result.kook.num) : null;
   const yijingRefs = buildYijingRefs(payload);
-  return JSON.stringify(
-    {
-      app: 'react-taiyi',
-      exportedAt: new Date().toISOString(),
-      meta: buildMeta(payload),
-      analysisContext: buildAnalysisContext(payload),
-      ...(solarTime?.timezone || solarTime?.applied ? { solarTime } : {}),
-      ...(residence ? { residence } : {}),
-      ...(inquiry ? { inquiry } : {}),
-      ...(result ? { result } : {}),
-      // 《太乙秘書》本局斷辭（144 局静态查表，kintaiyi taiyimishu 移植）：本局经典总断
-      ...(result && mishuEntry
-        ? {
-          mishuText: {
-            出處: `《太乙秘書》${result.kook.dun}遁第 ${result.kook.num} 局`,
-            五元干支: mishuEntry.ganzhi,
-            斷辭: mishuEntry.text,
-          },
-        }
-        : {}),
-      ...(huangjiOnlyInput ? { input: huangjiOnlyInput } : {}),
-      ...(mingfa ? { mingfa } : {}),
-      ...(planets ? { tenJing: planets } : {}),
-      ...(huangji ? { huangji } : {}),
-      // kintaiyi 全解释盘（《太乙統宗寶鑑》诸卷释文/統運/卦象/军事/博弈），繁体中文键为上游原样
-      ...(kintaiyiPan ? { kintaiyiPan } : {}),
-      // 命法卷二十釋文（taiyi_life 直出：十提金賦/十二宮星斷/雙星同宮論/諸星三等），命理人事断第一手依据
-      ...(kintaiyiLife ? { kintaiyiLife } : {}),
-      // 局數史例命中（该年份的史载纪事，year 为公元前直记；可与盘面互证）
-      ...(historyExamples?.length ? { historyExamples } : {}),
-      // 流卦運多期（流年12/流月12/流日15/流時12辰/流分10；首期即起局时刻）
-      ...(liuTimelines ? { liuTimelines } : {}),
-      // 周易经文附录（ctext 权威公版）：本盘出现之卦的卦辞爻辞原文，供 AI 精确引用、防错位串卦
-      ...(yijingRefs
-        ? {
-          yijingRefs: {
-            说明: '本盘（值卦/命法卦链/皇极各层含变爻/流卦动爻）出现之卦的《周易》通行本卦辞、爻辞原文，'
-              + '源自 ctext.org 公版经文。引用卦爻辞时请以此为准，勿凭记忆——「本盘动爻」为皇极变爻/流卦动爻所值之爻。',
-            卦: yijingRefs,
-          },
-        }
-        : {}),
-    },
-    null,
-    2,
-  );
+  return {
+    app: 'react-taiyi',
+    exportedAt: new Date().toISOString(),
+    meta: buildMeta(payload),
+    analysisContext: buildAnalysisContext(payload),
+    ...(solarTime?.timezone || solarTime?.applied ? { solarTime } : {}),
+    ...(residence ? { residence } : {}),
+    ...(inquiry ? { inquiry } : {}),
+    ...(result ? { result } : {}),
+    // 《太乙秘書》本局斷辭（144 局静态查表，kintaiyi taiyimishu 移植）：本局经典总断
+    ...(result && mishuEntry
+      ? {
+        mishuText: {
+          出處: `《太乙秘書》${result.kook.dun}遁第 ${result.kook.num} 局`,
+          五元干支: mishuEntry.ganzhi,
+          斷辭: mishuEntry.text,
+        },
+      }
+      : {}),
+    ...(huangjiOnlyInput ? { input: huangjiOnlyInput } : {}),
+    ...(mingfa ? { mingfa } : {}),
+    ...(planets ? { tenJing: planets } : {}),
+    ...(huangji ? { huangji } : {}),
+    // kintaiyi 全解释盘（《太乙統宗寶鑑》诸卷释文/統運/卦象/军事/博弈），繁体中文键为上游原样
+    ...(kintaiyiPan ? { kintaiyiPan } : {}),
+    // 命法卷二十釋文（taiyi_life 直出：十提金賦/十二宮星斷/雙星同宮論/諸星三等），命理人事断第一手依据
+    ...(kintaiyiLife ? { kintaiyiLife } : {}),
+    // 局數史例命中（该年份的史载纪事，year 为公元前直记；可与盘面互证）
+    ...(historyExamples?.length ? { historyExamples } : {}),
+    // 流卦運多期（流年12/流月12/流日15/流時12辰/流分10；首期即起局时刻）
+    ...(liuTimelines ? { liuTimelines } : {}),
+    // 周易经文附录（ctext 权威公版）：本盘出现之卦的卦辞爻辞原文，供 AI 精确引用、防错位串卦
+    ...(yijingRefs
+      ? {
+        yijingRefs: {
+          说明: '本盘（值卦/命法卦链/皇极各层含变爻/流卦动爻）出现之卦的《周易》通行本卦辞、爻辞原文，'
+            + '源自 ctext.org 公版经文。引用卦爻辞时请以此为准，勿凭记忆——「本盘动爻」为皇极变爻/流卦动爻所值之爻。',
+          卦: yijingRefs,
+        },
+      }
+      : {}),
+  };
+}
+
+export function toJSONText(payload: ExportPayload): string {
+  return JSON.stringify(buildExportObject(payload), null, 2);
+}
+
+/**
+ * TOON 文本导出（github.com/toon-format/toon）：与 JSON 同结构、语义等价，
+ * 面向 LLM 的紧凑格式（缩进层级 + 数组长度声明 + 表格化统一数组），显著省 token。
+ * AI Prompt 内嵌与 MCP 工具输出均用此格式；字段路径引用与 JSON 一致。
+ */
+export function toTOONText(payload: ExportPayload): string {
+  return encode(buildExportObject(payload));
 }
 
 const BOARD_ORDER: GongName[] = [
@@ -408,7 +419,7 @@ function pushYijingSection(L: string[], payload: ExportPayload): void {
   if (!refs) return;
   L.push('## 周易经文（本盘出现之卦）');
   L.push('');
-  L.push('ctext 权威公版卦辞/爻辞原文，引用卦爻辞以此为准（勿凭记忆）；完整爻辞见 JSON `yijingRefs` 字段。');
+  L.push('ctext 权威公版卦辞/爻辞原文，引用卦爻辞以此为准（勿凭记忆）；完整爻辞见结构化导出 `yijingRefs` 字段。');
   L.push('');
   for (const h of refs) {
     const dong = (h as { 本盘动爻?: string[] }).本盘动爻;
@@ -674,7 +685,7 @@ export function toMarkdown(payload: ExportPayload): string {
       L.push('### 卷二十釋文');
       L.push('');
       L.push('安命安身宮、飛祿飛馬黑符、十提金賦、十二宮星斷、雙星同宮論、諸星上中下三等全文' +
-        '已并入 JSON 导出（`kintaiyiLife` 字段），命理人事断请以其原文为第一手依据；Markdown 不重复长文。');
+        '已并入结构化导出（`kintaiyiLife` 字段），命理人事断请以其原文为第一手依据；Markdown 不重复长文。');
       L.push('');
     }
   }

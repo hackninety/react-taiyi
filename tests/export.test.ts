@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { calculateTaiyi, calculateHuangji, applyTrueSolarTime } from '../src/taiyi';
 import { calculateMingfa } from '../src/taiyi/mingfa';
-import { toJSONText, toMarkdown, buildMeta, buildAnalysisContext } from '../src/taiyi/export';
+import { decode } from '@toon-format/toon';
+import { toJSONText, toTOONText, toMarkdown, buildMeta, buildAnalysisContext } from '../src/taiyi/export';
 import { generateAIPrompt } from '../src/lib/prompt';
 import { findLongitude } from '../src/lib/cities';
 
@@ -210,15 +211,37 @@ describe('导出', () => {
     expect(md).toContain('黄畿派 · 已校订原文');
   });
 
-  it('AI Prompt 含分析框架与完整 JSON', () => {
+  it('AI Prompt 含分析框架与完整 TOON 数据（含格式说明）', () => {
     const prompt = generateAIPrompt({ result, mingfa });
     expect(prompt).toContain('太乙神数');
     expect(prompt).toContain('### 1. 局式总论');
     expect(prompt).toContain('### 6. 太乙命法（人事）');
-    expect(prompt).toContain('```json');
+    expect(prompt).toContain('```toon');
+    expect(prompt).toContain('数据格式说明');
     expect(prompt).toContain(result.kook.text);
     const noMingfa = generateAIPrompt({ result });
     expect(noMingfa).not.toContain('太乙命法（人事）');
+    // 仅皇极模式同样为 TOON
+    const hj = generateAIPrompt({
+      result: null,
+      huangji: calculateHuangji(-2356, { month: 3, day: 15, hour: 12 }),
+      huangjiOnlyInput: { year: -2356, month: 3, day: 15, hour: 12, minute: 0 },
+    });
+    expect(hj).toContain('```toon');
+  });
+
+  it('TOON 导出与 JSON 同构：往返解码逐字段一致且体积更小', () => {
+    const huangji = calculateHuangji(2026, { month: input.month, day: input.day, hour: input.hour });
+    const payload = { result, mingfa, huangji };
+    const jsonStr = toJSONText(payload);
+    const toonStr = toTOONText(payload);
+    const jo = JSON.parse(jsonStr) as Record<string, unknown>;
+    const to = decode(toonStr) as Record<string, unknown>;
+    // exportedAt 为两次调用的时间戳，剔除后比对
+    delete jo.exportedAt;
+    delete to.exportedAt;
+    expect(to).toEqual(jo);
+    expect(toonStr.length).toBeLessThan(jsonStr.length);
   });
 
   it('AI Prompt 反幻觉工程：事实清单+应期专节+自检+键路径', () => {

@@ -47,7 +47,7 @@ React + TypeScript 前后端排盘应用。支持
   **卦象（卷十三：統運卦象/卦象總述與動爻辭全文）**、行支編年（卷十四）、分野（卷八）、
   軌運（卷九）、州國災變（卷十一）、十精雲氣（卷十八）、军事三卷（战略/五陣八陣应用/占断+神將所主）、
   金函玉鏡，以及**運籌博弈分析**（Nash 均衡对照古法主客相关）；
-  全部随上游更新，并整体并入 JSON 导出（`kintaiyiPan` 字段）供 AI 引用释文；
+  全部随上游更新，并整体并入结构化导出（`kintaiyiPan` 字段）供 AI 引用释文；
   統運卡带**六爻年段时间轴、觀象期十二月直事轴与任意年統運查詢**，軌運卡带大小遊內外卦年段轴，
   軍事卡带**五陣置旗+八陣 SVG 示意图**
 - **流卦運五計多期时间轴**：流年 12 期 / 流月 12 期 / 流日 15 期 / 流時 12 辰 / 流分 10 期
@@ -67,17 +67,20 @@ React + TypeScript 前后端排盘应用。支持
   （`scripts/gen_yijing.py` 生成，卦符逐卦核验），抑制 LLM 背诵爻辞时的错位串卦
 - **所占何事**（可选）：占类（事占/命占/年运/军事/择时/通用）+ 问题文本，不参与排盘，
   注入 AI Prompt 使分析按占类聚焦
-- **AI 导出**：复制/下载 JSON 与 Markdown，均在开头附 `meta`（口径明细，重点标注太乙积年流派
-  与皇极岁卦流派，防止多流派数据混用；并澄清諸釋文皆統宗一系、不随积年流派切换）与
-  `analysisContext`（程序预先归集的断事要点，含卦爻辞须知）；另有**一键复制 AI Prompt**——
-  引导 AI 先读 meta 锁流派、先誊「盘面事实清单」再分析，含「应期推断」专节与分析后自检段（反幻觉工程），
+- **AI 导出（TOON 格式）**：复制/下载 [TOON](https://github.com/toon-format/toon)（面向 LLM 的省 token
+  结构化格式，语义等价 JSON、字段路径一致；实测全量导出较 JSON **省约 1/3 体积**）与 Markdown，
+  均在开头附 `meta`（口径明细，重点标注太乙积年流派与皇极岁卦流派，防止多流派数据混用；
+  并澄清諸釋文皆統宗一系、不随积年流派切换）与 `analysisContext`（程序预先归集的断事要点，含卦爻辞须知）；
+  另有**一键复制 AI Prompt**（内嵌 TOON 数据+格式说明）——引导 AI 先读 meta 锁流派、
+  先誊「盘面事实清单」再分析，含「应期推断」专节与分析后自检段（反幻觉工程），
   可选附「判读规则速查」给不熟太乙术语的通用模型兜底；导出分**完整/精简**两档并实时显示体积与估算 token
 
 ## MCP 服务器（让 AI 直接调用排盘做多轮推理）
 
 仓库内建 [MCP](https://modelcontextprotocol.io)（Model Context Protocol）server（`mcp/`），把本地引擎与
-kintaiyi 后端封装为 **13 个工具**，供 Claude Code / Claude Desktop 等 AI 多轮调用推理——从「一次性投喂
-JSON」升级为「排盘 → 查局断辞 → 按需取釋文 → 史例互证 → 应期推断」的工具循环：
+kintaiyi 后端封装为 **14 个工具**，供 Claude Code / Claude Desktop 等 AI 多轮调用推理——从「一次性投喂
+数据」升级为「排盘 → 查局断辞 → 按需取釋文 → 史例互证 → 应期推断」的工具循环
+（工具结果统一 [TOON](https://github.com/toon-format/toon) 格式，省约 1/3 token；server instructions 已向 AI 说明语法）：
 
 | 工具 | 说明 |
 |---|---|
@@ -151,7 +154,7 @@ src/taiyi/          # 排盘引擎（纯 TS，不依赖 React）
   engine.ts         #   推算管线（积算 → 局式 → 落位 → 算将 → 格局 → 布盘）
   mishu.ts          #   《太乙秘書》144 局断辞（gen_mishu.py 生成）
   yijing.ts         #   《周易》64 卦卦辞+384 爻辞（gen_yijing.py 自 ctext 生成）
-  export.ts         #   AI 导出（meta / analysisContext / JSON / Markdown，含经文附录）
+  export.ts         #   AI 导出（meta / analysisContext / TOON / JSON / Markdown，含经文附录）
   types.ts, utils.ts, index.ts
 src/lib/            # prompt.ts（AI 提示词）、knowledge.ts（判读规则速查）等
 src/components/     # InputPanel / Board（5×5 十六神式盘）/ ResultPanel / ExportCard
