@@ -492,10 +492,11 @@ export function toMarkdown(payload: ExportPayload): string {
   L.push(`> ⚠️ ${meta.流派声明}`);
   L.push('');
 
-  // 断事要点归集
+  // 断事要点归集（与 JSON analysisContext 对齐）
   const ctx = buildAnalysisContext(payload);
   L.push('## 断事要点归集（程序预读，供 AI 抓手）');
   L.push('');
+  if (ctx.所占之事) L.push(`- **所占之事**：${ctx.所占之事}`);
   L.push(`- **太乙盘要**：${ctx.太乙盘要}`);
   L.push(`- **主客态势**：${ctx.主客态势}`);
   L.push(`- **格局**：${(ctx.格局 as string[]).join('；') || '主客清明'}`);
@@ -503,6 +504,10 @@ export function toMarkdown(payload: ExportPayload): string {
   L.push(`- **值卦与周期**：${ctx.值卦与周期}`);
   if (mingfa) L.push(`- **命法要**：${ctx.命法要}`);
   if (huangji) L.push(`- **皇极大势**：${ctx.皇极大势}`);
+  if (ctx.流卦運要) L.push(`- **流卦運要**：${ctx.流卦運要}`);
+  if (ctx.史例參照) L.push(`- **史例參照**：${ctx.史例參照}`);
+  if (ctx.常居住地) L.push(`- **常居住地**：${ctx.常居住地}`);
+  if (ctx.卦爻辞须知) L.push(`- **卦爻辞须知**：${ctx.卦爻辞须知}`);
   L.push('');
 
   L.push('## 起局与局式');

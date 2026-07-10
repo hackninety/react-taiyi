@@ -46,6 +46,10 @@ describe('导出', () => {
     expect(md).toContain('常居住地：广东潮州湘桥区');
     expect(md).toContain('## 流卦運（五計多期）');
     expect(md).toContain('输入时间按 Asia/Tokyo（UTC+9）解释');
+    // 断事要点归集补齐（与 JSON analysisContext 对齐）：流卦運要/常居住地 出现在归集 bullet
+    expect(md).toContain('- **流卦運要**：');
+    expect(md).toContain('- **常居住地**：');
+    expect(md).toContain('- **卦爻辞须知**：');
   });
 
   it('kintaiyiPan 全解释盘并入 JSON 导出与 meta 模块', () => {

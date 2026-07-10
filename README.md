@@ -58,15 +58,27 @@ React + TypeScript 前后端排盘应用。支持
 - **五个上游文档页**（导航新增）：📜 局數史例（67 例交互年表，一键用该年起局、公元前自动切换皇极全跨度）、
   🔥 災異統計、📚 古籍書目（按朝代分组）、🚀 看盤要領（使用步骤+六篇要義）、🆕 上游更新日誌——
   数据经 `/api/docs/*` 直读 kintaiyi 仓库 `docs/*.md`，随上游更新
+- **《太乙秘書》本局斷辭**：七十二陽局/陰局全 144 局经典总断（利主利客、出军方位、阵法旗色、
+  云气、伏兵时辰），静态移植自 kintaiyi `taiyimishu`（本地模式亦可用），盘面成卡并入 AI 导出 `mishuText`
+- **命法卷二十釋文**（勾选命法且后端可用时）：`taiyi_life()` 直出的十提金賦、十二宮星斷、雙星同宮論、
+  諸星三等等釋文，除页面展示外整体并入 AI 导出 `kintaiyiLife`（命理人事断的第一手釋文）
+- **周易经文附录（反幻觉）**：为盘面值卦/命法卦链/皇极各层（含变爻）/流卦动爻出现之卦附上
+  《周易》通行本卦辞、爻辞原文（`yijingRefs` 字段），源自 Chinese Text Project 权威公版经文
+  （`scripts/gen_yijing.py` 生成，卦符逐卦核验），抑制 LLM 背诵爻辞时的错位串卦
+- **所占何事**（可选）：占类（事占/命占/年运/军事/择时/通用）+ 问题文本，不参与排盘，
+  注入 AI Prompt 使分析按占类聚焦
 - **AI 导出**：复制/下载 JSON 与 Markdown，均在开头附 `meta`（口径明细，重点标注太乙积年流派
-  与皇极岁卦流派，防止多流派数据混用）与 `analysisContext`（程序预先归集的断事要点）；
-  另有**一键复制 AI Prompt**，引导 AI 先锁定流派口径再展开分析
+  与皇极岁卦流派，防止多流派数据混用；并澄清諸釋文皆統宗一系、不随积年流派切换）与
+  `analysisContext`（程序预先归集的断事要点，含卦爻辞须知）；另有**一键复制 AI Prompt**——
+  引导 AI 先读 meta 锁流派、先誊「盘面事实清单」再分析，含「应期推断」专节与分析后自检段（反幻觉工程），
+  可选附「判读规则速查」给不熟太乙术语的通用模型兜底；导出分**完整/精简**两档并实时显示体积与估算 token
 
 ## 算法来源
 
 | 项目 | 用途 |
 |---|---|
-| [kentang2017/kintaiyi](https://github.com/kentang2017/kintaiyi)（MIT） | 主要移植蓝本：积年积算、七十二局表、十六神、主客定算三将、格局、八门、神煞；并作为黄金用例参考实现。经 [python-taiyi](https://github.com/hackninety/python-taiyi) 后端**直接运行其源码**（后端优先数据源 + 原生圆盘 SVG），随上游更新 |
+| [kentang2017/kintaiyi](https://github.com/kentang2017/kintaiyi)（MIT） | 主要移植蓝本：积年积算、七十二局表、十六神、主客定算三将、格局、八门、神煞；并作为黄金用例参考实现。经 [python-taiyi](https://github.com/hackninety/python-taiyi) 后端**直接运行其源码**（后端优先数据源 + 原生圆盘 SVG），随上游更新。另移植其 `taiyimishu`（《太乙秘書》144 局断辞，见 `scripts/gen_mishu.py`） |
+| [Chinese Text Project (ctext.org)](https://ctext.org/book-of-changes) | 《周易》通行本卦辞/爻辞公版经文源（`scripts/gen_yijing.py` 抓取生成 `src/taiyi/yijing.ts`，卦符逐卦核验；用于 AI 导出经文附录反幻觉） |
 | [hhszzzz/taibu](https://github.com/hhszzzz/taibu) | 工程架构参考（domain 分层）；其“太乙”为九星简化视角，未采用 |
 | [dglijin-oss/taiyi-skill](https://github.com/dglijin-oss/taiyi-skill) | 格局解读规则参考 |
 | [yhys-core / react-yhys](https://github.com/hackninety/react-yhys)（姊妹项目，git 依赖引用） | 皇极经世历：元会运世层级、先天六十卦序、黄畿派岁卦（已校订原文；祝泌派未校订、已关闭），及黄畿岁以下月经/旬纬/日/时经卦（岁卦逐层变爻·挨卦，`getSolarTerm().huangji.dayOfYear` 冬至换岁定位）。作为 npm 包直接引用，随上游更新 |
@@ -112,9 +124,14 @@ src/taiyi/          # 排盘引擎（纯 TS，不依赖 React）
   constants.ts      #   七十二局表、十六神、纪元表等常数
   calendar.ts       #   lunar-typescript 历法适配（干支五柱/节气/农历）
   engine.ts         #   推算管线（积算 → 局式 → 落位 → 算将 → 格局 → 布盘）
+  mishu.ts          #   《太乙秘書》144 局断辞（gen_mishu.py 生成）
+  yijing.ts         #   《周易》64 卦卦辞+384 爻辞（gen_yijing.py 自 ctext 生成）
+  export.ts         #   AI 导出（meta / analysisContext / JSON / Markdown，含经文附录）
   types.ts, utils.ts, index.ts
-src/components/     # InputPanel / Board（5×5 十六神式盘）/ ResultPanel
-scripts/            # 黄金用例生成器（Python）
+src/lib/            # prompt.ts（AI 提示词）、knowledge.ts（判读规则速查）等
+src/components/     # InputPanel / Board（5×5 十六神式盘）/ ResultPanel / ExportCard
+scripts/            # 生成器：gen_fixtures.py（黄金用例）/ verify_examples.py（局數史例）
+                    #        gen_mishu.py（太乙秘書）/ gen_yijing.py（周易经文）
 tests/              # vitest 对照测试
 ```
 
@@ -142,6 +159,8 @@ tests/              # vitest 对照测试
      天文上应为大寒），本项目按正确天文语义实现；fixtures 采样避开该窗口
   2. 「日计 × 太乙局」组合：kintaiyi 以浮点数作列表下标必然崩溃，本项目正常出盘
   3. 格局增补「四郭杜」（本项目依《太乙统宗宝鉴》四郭之义增补，kintaiyi 未收录），对照测试中单独过滤
-- 命法解读文本（taiyi_life_dict 歌诀释义）与运筹博弈分析未移植，属内容层，可按需增补
+- 命法卷二十歌诀释义（`taiyi_life()` 十提金賦/十二宮星斷等）与运筹博弈分析（Nash 均衡）
+  经后端直出并并入 AI 导出（`kintaiyiLife` / `kintaiyiPan.運籌博弈分析`）；仍缺项见上游
+  《古籍未納入內容分析》——呂基太乙（卷六）、卷五內外輔相/將帥賢否、卷七大遊凶筭等，属内容层，可按需增补
 
 仅供术数文化研究。
