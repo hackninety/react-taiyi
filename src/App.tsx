@@ -14,12 +14,13 @@ import {
   getApiBase, getDataSource, saveDataSource,
 } from './taiyi/remote';
 import type { DataSource } from './taiyi/remote';
-import { fetchPan } from './taiyi/pan';
+import { fetchPan, fetchLife } from './taiyi/pan';
 import { PanCards } from './components/PanCards';
 import type { PanState } from './components/PanCards';
 import { TongyunExtra, GuiyunExtra, WuzhenExtra } from './components/PanExtras';
 import { LiuTimeline } from './components/LiuTimeline';
 import { LifeCards } from './components/LifeCards';
+import type { LifeState } from './components/LifeCards';
 import { DocsView } from './components/DocsPages';
 import { InputPanel } from './components/InputPanel';
 import type { ResidenceSetting, SolarTimeSetting } from './components/InputPanel';
@@ -95,6 +96,8 @@ export default function App() {
   const [historyMatches, setHistoryMatches] = useState<ExampleRow[]>([]);
   // 流卦運多期（提升到 App：时间轴显示 + 并入 AI 导出）
   const [liu, setLiu] = useState<LiuState>({ phase: 'idle' });
+  // 命法卷二十扩展（taiyi_life 直出：十提金賦/十二宮星斷等釋文）：展示 + 并入 AI 导出
+  const [life, setLife] = useState<LifeState>({ phase: 'idle' });
   // 常居住地（不参与推算，随导出供 AI 作命盘人事断的地域参照；自由填写）
   const [residence, setResidence] = usePersistentState<ResidenceSetting>('residence', { enabled: false, text: '' });
   const [boardView, setBoardView] = usePersistentState<'both' | 'square' | 'circle'>('boardView', 'both');
@@ -327,6 +330,27 @@ export default function App() {
       .finally(() => clearTimeout(timer));
     return () => { active = false; clearTimeout(timer); ctrl.abort(); };
   }, [dataSource, remoteOk, remoteInput, apiBase]);
+  // 命法卷二十扩展：命法勾选且后端可用时请求（标准范围内；命法本身不支持范围外）
+  useEffect(() => {
+    const enabled = dataSource === 'remote' && remoteOk && taiyiInRange && showMingfa;
+    if (!enabled) { setLife({ phase: 'idle' }); return; }
+    let active = true;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000);
+    setLife({ phase: 'loading' });
+    fetchLife(remoteInput, sex, apiBase, ctrl.signal)
+      .then((resp) => { if (active) setLife({ phase: 'ok', life: resp.life }); })
+      .catch((e: unknown) => {
+        if (!active) return;
+        setLife({
+          phase: 'err',
+          reason: ctrl.signal.aborted ? '请求超时' : e instanceof Error ? e.message : String(e),
+        });
+      })
+      .finally(() => clearTimeout(timer));
+    return () => { active = false; clearTimeout(timer); ctrl.abort(); };
+  }, [dataSource, remoteOk, taiyiInRange, showMingfa, remoteInput, sex, apiBase]);
+
   const circularUrl = remoteOk ? panSvgUrl(remoteInput, apiBase, Boolean(planets)) : null;
   const circularNote = dataSource === 'local'
     ? '当前为「仅本地引擎」模式，切换数据源后显示'
@@ -495,9 +519,7 @@ export default function App() {
                 }
               />
             )}
-            {taiyiInRange && showMingfa && (
-              <LifeCards input={effectiveInput} sex={sex} apiBase={apiBase} enabled={remoteOk} />
-            )}
+            {taiyiInRange && showMingfa && <LifeCards state={life} />}
             {historyMatches.length > 0 && (
               <section className="card hx-match">
                 <h3>
@@ -520,6 +542,7 @@ export default function App() {
               payload={{
                 result, mingfa, planets, solarTime: solarInfo, huangji,
                 kintaiyiPan: pan.phase === 'ok' ? pan.data : null,
+                kintaiyiLife: life.phase === 'ok' ? life.life : null,
                 historyExamples: historyMatches.length ? historyMatches : null,
                 liuTimelines: liu.phase === 'ok' ? liu.liu : null,
                 residence: residence.enabled && residence.text.trim()

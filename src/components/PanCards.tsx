@@ -7,7 +7,7 @@ import { PAN_GROUPS } from '../taiyi/pan';
  * kintaiyi 全解释盘渲染：上游 pan() 中文键直出，通用递归渲染器 + 主题分组卡。
  * 值形态（经后端 JSON 安全化）：str / number / list / 嵌套 dict（≤3 层）。
  * 分组以卡片列出，点击弹出模态框（背景模糊、点击背景关闭）展示全文——
- * 避免长释文/JSON 在网格列内被截断。
+ * 避免长释文/JSON 在网格列内被截断。模态框壳层（GroupModalCards）供命法卷二十卡复用。
  */
 
 function isEmpty(v: unknown): boolean {
@@ -55,38 +55,22 @@ export function PanValue({ v, depth = 0 }: { v: unknown; depth?: number }) {
   );
 }
 
-export type PanState =
-  | { phase: 'idle' }
-  | { phase: 'loading' }
-  | { phase: 'ok'; data: PanData; ref: string }
-  | { phase: 'err'; reason: string };
-
-interface Props {
-  state: PanState;
-  /** 数据源为「仅本地」或后端回退时的说明 */
-  unavailableNote?: string | null;
-  /** 分组增强插件（按组标题挂载，渲染于组内容顶部）：統運时间轴/軌運轴/五陣八陣图等 */
-  extras?: Record<string, React.ReactNode>;
+export interface ModalGroup {
+  title: string;
+  note?: string;
+  content: React.ReactNode;
 }
 
-export function PanCards({ state, unavailableNote, extras }: Props) {
+/** 分组按钮卡 + 点击弹出模态框（ESC/点击背景关闭、滚动锁定）。resetKey 变化时关闭遗留弹窗。 */
+export function GroupModalCards({ groups, resetKey }: { groups: ModalGroup[]; resetKey?: unknown }) {
   const [openTitle, setOpenTitle] = useState<string | null>(null);
 
-  const data: PanData | null = state.phase === 'ok' ? state.data : null;
-
   // 数据换代（重新排盘）时关闭遗留模态框，避免旧弹窗随新数据到达自动重弹
-  useEffect(() => { setOpenTitle(null); }, [data]);
+  useEffect(() => { setOpenTitle(null); }, [resetKey]);
 
-  // 仅列出有内容的分组
-  const groups = data
-    ? PAN_GROUPS
-        .map((g) => ({ g, present: g.keys.filter((k) => !isEmpty(data[k])) }))
-        .filter((x) => x.present.length > 0)
-    : [];
-
-  const active = openTitle ? groups.find((x) => x.g.title === openTitle) ?? null : null;
+  const active = openTitle ? groups.find((x) => x.title === openTitle) ?? null : null;
   // 稳定字符串依赖（active 每次渲染都是新对象）：分组消失时也会切回 null 从而解锁
-  const activeTitle = active ? active.g.title : null;
+  const activeTitle = active ? active.title : null;
 
   // 打开时：ESC 关闭 + 锁定背景滚动
   useEffect(() => {
@@ -102,6 +86,86 @@ export function PanCards({ state, unavailableNote, extras }: Props) {
   }, [activeTitle]);
 
   return (
+    <>
+      <div className="pan-groups">
+        {groups.map((g) => (
+          <button
+            key={g.title}
+            type="button"
+            className="pan-group"
+            onClick={() => setOpenTitle(g.title)}
+          >
+            <span className="pan-group-title">{g.title}</span>
+            {g.note && <em>{g.note}</em>}
+          </button>
+        ))}
+      </div>
+      {active && createPortal(
+        <div
+          className="pan-modal-backdrop"
+          onClick={() => setOpenTitle(null)}
+          role="presentation"
+        >
+          <div
+            className="pan-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={active.title}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="pan-modal-head">
+              <span className="pan-modal-title">{active.title}</span>
+              {active.note && <em>{active.note}</em>}
+            </div>
+            <div className="pan-body">{active.content}</div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
+export type PanState =
+  | { phase: 'idle' }
+  | { phase: 'loading' }
+  | { phase: 'ok'; data: PanData; ref: string }
+  | { phase: 'err'; reason: string };
+
+interface Props {
+  state: PanState;
+  /** 数据源为「仅本地」或后端回退时的说明 */
+  unavailableNote?: string | null;
+  /** 分组增强插件（按组标题挂载，渲染于组内容顶部）：統運时间轴/軌運轴/五陣八陣图等 */
+  extras?: Record<string, React.ReactNode>;
+}
+
+export function PanCards({ state, unavailableNote, extras }: Props) {
+  const data: PanData | null = state.phase === 'ok' ? state.data : null;
+
+  // 仅列出有内容的分组
+  const groups: ModalGroup[] = data
+    ? PAN_GROUPS
+      .map((g) => ({ g, present: g.keys.filter((k) => !isEmpty(data[k])) }))
+      .filter((x) => x.present.length > 0)
+      .map(({ g, present }) => ({
+        title: g.title,
+        note: g.note,
+        content: (
+          <>
+            {extras?.[g.title]}
+            {present.map((k) => (
+              <div key={k} className="pan-item">
+                {(present.length > 1 || k !== g.title) && <h4>{k}</h4>}
+                <PanValue v={data[k]} />
+              </div>
+            ))}
+          </>
+        ),
+      }))
+    : [];
+
+  return (
     <section className="card pan-wrap">
       <h3>
         kintaiyi 全解釋
@@ -112,51 +176,7 @@ export function PanCards({ state, unavailableNote, extras }: Props) {
       {state.phase === 'err' && (
         <p className="pan-note err">解釋內容載入失敗：{state.reason}（盤面與導出不受影響）</p>
       )}
-      {state.phase === 'ok' && (
-        <div className="pan-groups">
-          {groups.map(({ g }) => (
-            <button
-              key={g.title}
-              type="button"
-              className="pan-group"
-              onClick={() => setOpenTitle(g.title)}
-            >
-              <span className="pan-group-title">{g.title}</span>
-              <em>{g.note}</em>
-            </button>
-          ))}
-        </div>
-      )}
-      {active && data && createPortal(
-        <div
-          className="pan-modal-backdrop"
-          onClick={() => setOpenTitle(null)}
-          role="presentation"
-        >
-          <div
-            className="pan-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={active.g.title}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="pan-modal-head">
-              <span className="pan-modal-title">{active.g.title}</span>
-              <em>{active.g.note}</em>
-            </div>
-            <div className="pan-body">
-              {extras?.[active.g.title]}
-              {active.present.map((k) => (
-                <div key={k} className="pan-item">
-                  {(active.present.length > 1 || k !== active.g.title) && <h4>{k}</h4>}
-                  <PanValue v={data[k]} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+      {state.phase === 'ok' && <GroupModalCards groups={groups} resetKey={data} />}
     </section>
   );
 }

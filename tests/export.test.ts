@@ -58,6 +58,24 @@ describe('导出', () => {
     expect(without.kintaiyiPan).toBeUndefined();
   });
 
+  it('kintaiyiLife 命法卷二十釋文并入导出（JSON+meta+ctx+markdown+prompt）', () => {
+    const kintaiyiLife = { 十提金賦: '三基五福太乙賦……', 十二宮星斷: { 命宮: { 五福: '五福居旺……' } } };
+    const payload = { result, mingfa, kintaiyiLife };
+    const parsed = JSON.parse(toJSONText(payload));
+    expect(parsed.kintaiyiLife.十提金賦).toContain('三基五福');
+    expect(parsed.meta.启用模块.join()).toContain('命法卷二十釋文');
+    const ctx = buildAnalysisContext(payload) as Record<string, string>;
+    expect(ctx.命法要).toContain('kintaiyiLife');
+    const md = toMarkdown(payload);
+    expect(md).toContain('### 卷二十釋文');
+    const prompt = generateAIPrompt(payload);
+    expect(prompt).toContain('kintaiyiLife');
+    expect(prompt).toContain('十提金賦');
+    // 未提供时不出现
+    expect(JSON.parse(toJSONText({ result, mingfa })).kintaiyiLife).toBeUndefined();
+    expect(generateAIPrompt({ result, mingfa })).not.toContain('kintaiyiLife');
+  });
+
   it('Markdown 含全部章节与关键数据', () => {
     const md = toMarkdown({
       result,

@@ -27,6 +27,9 @@ export interface ExportPayload {
   huangjiOnlyInput?: { year: number; month: number; day: number; hour: number; minute: number } | null;
   /** kintaiyi 全解释盘（后端 pan() 直出，中文键与上游一致；后端不可用时为空） */
   kintaiyiPan?: Record<string, unknown> | null;
+  /** 命法卷二十扩展（后端 taiyi_life() 直出釋文：安命安身宮/十提金賦/十二宮星斷/雙星同宮論/諸星三等；
+   * 未勾命法或后端不可用时为空） */
+  kintaiyiLife?: Record<string, unknown> | null;
   /** 局數史例命中（该排盘年份的史载纪事，year 为公元前直记；来自上游 docs/example.md） */
   historyExamples?: Array<{ year: number; kook: string; event: string; source: string }> | null;
   /** 流卦運多期（流年12/流月12/流日15/流時12辰/流分10，上游 hex_timeline 推法直出） */
@@ -94,11 +97,13 @@ export interface ExportMeta {
 
 /** 口径明细：AI 读盘前先看这里，重点是流派标注，防止不同流派数据错乱 */
 export function buildMeta(payload: ExportPayload): ExportMeta {
-  const { result: r, mingfa, planets, solarTime, huangji, kintaiyiPan, liuTimelines, residence, historyExamples } = payload;
+  const { result: r, mingfa, planets, solarTime, huangji, kintaiyiPan, kintaiyiLife, liuTimelines, residence, historyExamples } = payload;
   const payloadHasPan = Boolean(kintaiyiPan && Object.keys(kintaiyiPan).length);
+  const payloadHasLife = Boolean(kintaiyiLife && Object.keys(kintaiyiLife).length);
   const modules: string[] = [];
   if (r) modules.push('太乙主盘');
   if (mingfa) modules.push('太乙命法（含大限：阳九/百六行限）');
+  if (payloadHasLife) modules.push('命法卷二十釋文（安命安身宮/十提金賦/十二宮星斷/雙星同宮論/諸星三等）');
   if (planets) modules.push('十精（七曜落位）');
   if (huangji) modules.push('皇极经世历（元会运世卦历）');
   if (payloadHasPan) modules.push('kintaiyi 全解释盘（統宗寶鑑诸卷）');
@@ -140,7 +145,7 @@ export function buildMeta(payload: ExportPayload): ExportMeta {
 }
 
 /** 断事要点预归集：给 AI 的推理抓手 */
-export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, huangjiOnlyInput, historyExamples, liuTimelines, residence }: ExportPayload) {
+export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, huangjiOnlyInput, historyExamples, liuTimelines, residence, kintaiyiLife }: ExportPayload) {
   const ctx: Record<string, unknown> = {};
 
   if (!r) {
@@ -211,7 +216,10 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
       `${mingfa.sex}命；命法积数 ${mingfa.lifeAccum}，三才数（天/地/人）${mingfa.threeCai.join('/')}；` +
       `出身卦 ${mingfa.lifeStartGua.gua ?? '—'}；受气干支 ${mingfa.shouqiGanzhi}；` +
       `流年卦链 年${mingfa.yearGua.gua ?? '—'}→月${mingfa.monthGua.gua ?? '—'}→日${mingfa.dayGua.gua ?? '—'}→时${mingfa.hourGua.gua ?? '—'}→分${mingfa.minuteGua.gua ?? '—'}；` +
-      '十二命宫与大限（阳九/百六行限全表）详见 mingfa 字段（yangjiuXingxian/bailiuXingxian）。';
+      '十二命宫与大限（阳九/百六行限全表）详见 mingfa 字段（yangjiuXingxian/bailiuXingxian）。' +
+      (kintaiyiLife && Object.keys(kintaiyiLife).length
+        ? '命理釋文第一手依据在 kintaiyiLife 字段（卷二十直出：安命安身宮、飛祿飛馬黑符、十提金賦、十二宮星斷、雙星同宮論、諸星上中下三等），断人事请优先引用其原文。'
+        : '');
   }
 
   if (huangji) {
@@ -224,7 +232,7 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
 export function toJSONText(payload: ExportPayload): string {
   const {
     result, mingfa, planets, solarTime, huangji, huangjiOnlyInput,
-    kintaiyiPan, historyExamples, liuTimelines, residence,
+    kintaiyiPan, kintaiyiLife, historyExamples, liuTimelines, residence,
   } = payload;
   return JSON.stringify(
     {
@@ -241,6 +249,8 @@ export function toJSONText(payload: ExportPayload): string {
       ...(huangji ? { huangji } : {}),
       // kintaiyi 全解释盘（《太乙統宗寶鑑》诸卷释文/統運/卦象/军事/博弈），繁体中文键为上游原样
       ...(kintaiyiPan ? { kintaiyiPan } : {}),
+      // 命法卷二十釋文（taiyi_life 直出：十提金賦/十二宮星斷/雙星同宮論/諸星三等），命理人事断第一手依据
+      ...(kintaiyiLife ? { kintaiyiLife } : {}),
       // 局數史例命中（该年份的史载纪事，year 为公元前直记；可与盘面互证）
       ...(historyExamples?.length ? { historyExamples } : {}),
       // 流卦運多期（流年12/流月12/流日15/流時12辰/流分10；首期即起局时刻）
@@ -311,7 +321,7 @@ function toHuangjiOnlyMarkdown(payload: ExportPayload): string {
 }
 
 export function toMarkdown(payload: ExportPayload): string {
-  const { result: r, mingfa, planets, solarTime, huangji, historyExamples, liuTimelines, residence } = payload;
+  const { result: r, mingfa, planets, solarTime, huangji, historyExamples, liuTimelines, residence, kintaiyiLife } = payload;
   if (!r) return toHuangjiOnlyMarkdown(payload);
   const L: string[] = [];
   const { input } = r;
@@ -493,6 +503,13 @@ export function toMarkdown(payload: ExportPayload): string {
     L.push(`|${mingfa.bailiuXingxian.map(() => '---').join('|')}|`);
     L.push(`| ${mingfa.bailiuXingxian.map(([, zhi]) => zhi).join(' | ')} |`);
     L.push('');
+    if (kintaiyiLife && Object.keys(kintaiyiLife).length) {
+      L.push('### 卷二十釋文');
+      L.push('');
+      L.push('安命安身宮、飛祿飛馬黑符、十提金賦、十二宮星斷、雙星同宮論、諸星上中下三等全文' +
+        '已并入 JSON 导出（`kintaiyiLife` 字段），命理人事断请以其原文为第一手依据；Markdown 不重复长文。');
+      L.push('');
+    }
   }
 
   if (huangji) {
