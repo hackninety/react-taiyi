@@ -15,6 +15,11 @@ export function starsLoaded(): boolean {
   return table !== null;
 }
 
+/** 直接注入预加载的十精表（Node/MCP 场景：浏览器 fetch 不可用，由调用方 fs 读入） */
+export function setStarsData(data: StarsTable): void {
+  table = data;
+}
+
 export async function loadStarsData(url = `${import.meta.env.BASE_URL}data/stars_data.json`): Promise<StarsTable> {
   if (table) return table;
   loading ??= fetch(url).then(async (res) => {

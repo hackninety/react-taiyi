@@ -73,6 +73,29 @@ React + TypeScript 前后端排盘应用。支持
   引导 AI 先读 meta 锁流派、先誊「盘面事实清单」再分析，含「应期推断」专节与分析后自检段（反幻觉工程），
   可选附「判读规则速查」给不熟太乙术语的通用模型兜底；导出分**完整/精简**两档并实时显示体积与估算 token
 
+## MCP 服务器（让 AI 直接调用排盘做多轮推理）
+
+仓库内建 [MCP](https://modelcontextprotocol.io)（Model Context Protocol）server（`mcp/`），把本地引擎与
+kintaiyi 后端封装为 **13 个工具**，供 Claude Code / Claude Desktop 等 AI 多轮调用推理——从「一次性投喂
+JSON」升级为「排盘 → 查局断辞 → 按需取釋文 → 史例互证 → 应期推断」的工具循环：
+
+| 工具 | 说明 |
+|---|---|
+| `taiyi_chart` | **排盘主入口**（本地引擎）：meta 口径 / analysisContext 要点 / 盘面 / 《太乙秘書》局断 / 周易经文附录；可选命法（sex）与真太阳时（经度） |
+| `taiyi_mingfa` / `huangji_calendar` | 太乙命法（本地）；皇极经世历（一元全跨度，本地，黄畿派） |
+| `taiyi_mishu` / `yijing_text` / `taiyi_tenjing` / `taiyi_knowledge` | 《太乙秘書》144 局断辞 / 周易卦爻辞原文 / 十精七曜落位 / 判读规则速查（全本地、零网络） |
+| `kintaiyi_pan` / `kintaiyi_life` | 后端透传《統宗寶鑑》诸卷 97 键 / 命法卷二十 59 键——**不带 keys 先返回键目录（含体积），再按 keys 取键**，防上下文爆量 |
+| `kintaiyi_liu` / `taiyi_history_examples` / `kintaiyi_docs` / `taiyi_status` | 流卦運多期 / 局數史例（67 例） / 上游文档（query 行过滤） / 引擎与后端状态 |
+
+在本仓库打开 Claude Code 会经 `.mcp.json` 自动发现；其他项目 / 全局注册：
+
+```bash
+claude mcp add taiyi -- npx tsx D:\WWW\react-taiyi\mcp\main.ts
+```
+
+环境变量 `TAIYI_API` 覆盖后端地址（默认 `https://taiyi-api.0x7c.cc`）。
+年份约定：工具输入均为**天文纪年**（0 = 公元前 1 年）。协议级测试见 `tests/mcp.test.ts`。
+
 ## 算法来源
 
 | 项目 | 用途 |
@@ -130,6 +153,7 @@ src/taiyi/          # 排盘引擎（纯 TS，不依赖 React）
   types.ts, utils.ts, index.ts
 src/lib/            # prompt.ts（AI 提示词）、knowledge.ts（判读规则速查）等
 src/components/     # InputPanel / Board（5×5 十六神式盘）/ ResultPanel / ExportCard
+mcp/                # MCP server（tools.ts 工具逻辑 / server.ts 协议接线 / main.ts stdio 入口）
 scripts/            # 生成器：gen_fixtures.py（黄金用例）/ verify_examples.py（局數史例）
                     #        gen_mishu.py（太乙秘書）/ gen_yijing.py（周易经文）
 tests/              # vitest 对照测试
