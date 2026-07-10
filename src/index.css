@@ -654,6 +654,23 @@ body {
 
 .geju-list span { color: var(--text); }
 
+/* ── 《太乙秘書》本局断辞卡 ── */
+.mishu-card { border-color: rgba(233, 204, 136, 0.28); }
+
+.mishu-meta {
+  margin: 2px 0 8px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.mishu-text {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.9;
+  color: var(--text);
+  text-align: justify;
+}
+
 /* ── 命法 ── */
 .palace-grid {
   display: grid;

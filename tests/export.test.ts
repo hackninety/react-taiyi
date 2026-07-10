@@ -76,6 +76,20 @@ describe('导出', () => {
     expect(generateAIPrompt({ result, mingfa })).not.toContain('kintaiyiLife');
   });
 
+  it('《太乙秘書》本局断辞并入导出（JSON+ctx+markdown+prompt）', () => {
+    const parsed = JSON.parse(toJSONText({ result }));
+    expect(parsed.mishuText.出處).toBe(`《太乙秘書》${result.kook.dun}遁第 ${result.kook.num} 局`);
+    expect(parsed.mishuText.斷辭.length).toBeGreaterThan(30);
+    const ctx = buildAnalysisContext({ result }) as Record<string, string>;
+    expect(ctx.秘書局斷).toContain(`${result.kook.dun}遁第 ${result.kook.num} 局`);
+    const md = toMarkdown({ result });
+    expect(md).toContain('## 《太乙秘書》本局斷辭');
+    expect(md).toContain('- **秘書局斷**：');
+    const prompt = generateAIPrompt({ result });
+    expect(prompt).toContain('mishuText');
+    expect(prompt).toContain('《太乙秘書》');
+  });
+
   it('Markdown 含全部章节与关键数据', () => {
     const md = toMarkdown({
       result,

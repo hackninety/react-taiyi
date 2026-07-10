@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SolarTimeInfo, TaiyiResult } from '../taiyi';
 import { NUM_TO_GONG } from '../taiyi';
+import { getMishu } from '../taiyi/mishu';
 
 interface Props {
   result: TaiyiResult;
@@ -20,6 +21,7 @@ const gongText = (n: number) => `${'一二三四五六七八九'[n - 1]}宮（${
 
 export function ResultPanel({ result, solarInfo }: Props) {
   const r = result;
+  const mishu = getMishu(r.kook.dun, r.kook.num);
   return (
     <>
       <section className="card">
@@ -86,6 +88,16 @@ export function ResultPanel({ result, solarInfo }: Props) {
         {r.homeAwayRelation && <Row label="主客相关">{r.homeAwayRelation}</Row>}
         {r.guDan && <Row label="孤单">{r.guDan}</Row>}
       </section>
+
+      {mishu && (
+        <section className="card mishu-card">
+          <h3>《太乙秘書》本局斷辭</h3>
+          <p className="mishu-meta">
+            {r.kook.dun}遁第 {r.kook.num} 局 · 五元干支 {mishu.ganzhi} · 靜態移植自 kintaiyi taiyimishu · 已并入 AI 導出
+          </p>
+          <p className="mishu-text">{mishu.text}</p>
+        </section>
+      )}
 
       <section className="card">
         <h3>神煞 · 门 · 卦</h3>

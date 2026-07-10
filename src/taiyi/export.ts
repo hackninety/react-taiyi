@@ -12,6 +12,7 @@ import type { HuangjiInfo } from './huangji';
 import type { LiuData } from './pan';
 import { formatGregorianYearCn } from './huangji';
 import { SIXTEEN_GOD, NUM_TO_GONG } from './constants';
+import { getMishu } from './mishu';
 
 export interface ExportPayload {
   /** 太乙主盘；超出太乙历法范围（600–9999 外的皇极全跨度年份）时为空 */
@@ -185,6 +186,12 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
 
   ctx.格局 = Object.keys(r.geJu).map((k) => `${k}：${r.geJu[k]}`);
 
+  const mishu = getMishu(r.kook.dun, r.kook.num);
+  if (mishu) {
+    ctx.秘書局斷 =
+      `《太乙秘書》${r.kook.dun}遁第 ${r.kook.num} 局經典總斷（主客勝負與趨避以此為綱，與盤面數據互證）：${mishu.text}`;
+  }
+
   ctx.值卦与周期 =
     `值年卦 ${r.yearGua}、值日卦 ${r.dayGua}、值时卦 ${r.hourGua}；阳九在${r.yangjiu}、百六在${r.bailiu}。`;
 
@@ -234,6 +241,7 @@ export function toJSONText(payload: ExportPayload): string {
     result, mingfa, planets, solarTime, huangji, huangjiOnlyInput,
     kintaiyiPan, kintaiyiLife, historyExamples, liuTimelines, residence,
   } = payload;
+  const mishuEntry = result ? getMishu(result.kook.dun, result.kook.num) : null;
   return JSON.stringify(
     {
       app: 'react-taiyi',
@@ -243,6 +251,16 @@ export function toJSONText(payload: ExportPayload): string {
       ...(solarTime?.timezone || solarTime?.applied ? { solarTime } : {}),
       ...(residence ? { residence } : {}),
       ...(result ? { result } : {}),
+      // 《太乙秘書》本局斷辭（144 局静态查表，kintaiyi taiyimishu 移植）：本局经典总断
+      ...(result && mishuEntry
+        ? {
+          mishuText: {
+            出處: `《太乙秘書》${result.kook.dun}遁第 ${result.kook.num} 局`,
+            五元干支: mishuEntry.ganzhi,
+            斷辭: mishuEntry.text,
+          },
+        }
+        : {}),
       ...(huangjiOnlyInput ? { input: huangjiOnlyInput } : {}),
       ...(mingfa ? { mingfa } : {}),
       ...(planets ? { tenJing: planets } : {}),
@@ -353,6 +371,7 @@ export function toMarkdown(payload: ExportPayload): string {
   L.push(`- **太乙盘要**：${ctx.太乙盘要}`);
   L.push(`- **主客态势**：${ctx.主客态势}`);
   L.push(`- **格局**：${(ctx.格局 as string[]).join('；') || '主客清明'}`);
+  if (ctx.秘書局斷) L.push(`- **秘書局斷**：${ctx.秘書局斷}`);
   L.push(`- **值卦与周期**：${ctx.值卦与周期}`);
   if (mingfa) L.push(`- **命法要**：${ctx.命法要}`);
   if (huangji) L.push(`- **皇极大势**：${ctx.皇极大势}`);
@@ -428,6 +447,18 @@ export function toMarkdown(payload: ExportPayload): string {
   if (r.homeAwayRelation) L.push(`- 主客相关：${r.homeAwayRelation}`);
   if (r.guDan) L.push(`- 孤单：${r.guDan}`);
   L.push('');
+
+  {
+    const mishu = getMishu(r.kook.dun, r.kook.num);
+    if (mishu) {
+      L.push('## 《太乙秘書》本局斷辭');
+      L.push('');
+      L.push(`${r.kook.dun}遁第 ${r.kook.num} 局（五元干支：${mishu.ganzhi}）——经典总断，主客勝負與趨避以此為綱：`);
+      L.push('');
+      L.push(`> ${mishu.text}`);
+      L.push('');
+    }
+  }
 
   L.push('## 神煞 · 卦');
   L.push('');
