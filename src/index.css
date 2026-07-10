@@ -800,6 +800,57 @@ body {
   padding: 3px 10px;
 }
 
+/* 导出详略分档 */
+.export-tier { margin-top: 12px; }
+
+.tier-seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.tier-seg button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tier-seg button em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+
+.tier-seg button.active {
+  background: rgba(212, 175, 55, 0.16);
+  color: var(--gold-light);
+}
+
+.tier-seg button.active em { color: var(--gold-light); opacity: 0.85; }
+
+.tier-note {
+  margin: 8px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.tier-note.single { margin-top: 12px; }
+
 .export-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
