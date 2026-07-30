@@ -15,9 +15,9 @@ const TOON_NOTE =
 const TOPIC_EMPHASIS: Record<string, string> = {
   事占: '侧重主客定算与格局、三门五将、《太乙秘書》本局斷辭（mishuText），明断宜主宜客、宜动宜静与成败倾向；',
   命占: '侧重太乙命法（mingfa）与卷二十釋文（kintaiyiLife）：命宫与十二宫星断、阳九百六行限，结合值年卦论本年吉凶；',
-  年运: '侧重值年卦（result.yearGua 为纲）、統運入爻（kintaiyiPan.卷十二）、阳九百六周期、流卦時間軸（liuTimelines 相位为辅）与皇极岁卦大势；',
+  年运: '侧重值年卦（result.yearGua 为纲）、統運入爻（kintaiyiPan.卷十二）、阳九百六周期、皇极岁卦大势，如导出含 liuTimelines 再以流卦相位为辅；',
   军事: '侧重《太乙秘書》斷辭之出军方位阵法旗色伏兵时（mishuText）、军事诸卷（kintaiyiPan 軍事戰略/應用/占斷）、主客算将与三门五将；',
-  择时: '侧重应期与趋避：八门值事、《太乙秘書》伏兵利时、流時/流分卦（liuTimelines）、阳九百六节点，给出具体时间窗口建议；',
+  择时: '侧重应期与趋避：八门值事、《太乙秘書》伏兵利时、阳九百六节点（如导出含 liuTimelines 再参流時/流分卦），给出具体时间窗口建议；',
 };
 
 /** 所占何事聚焦段（未设置时为空串） */

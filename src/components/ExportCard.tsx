@@ -30,6 +30,8 @@ function estimateTokens(s: string): number {
   return Math.round(cjk * 0.6 + other * 0.3);
 }
 
+const bytesOf = (s: string): number => new TextEncoder().encode(s).length;
+
 function fmtBytes(n: number): string {
   return n >= 1024 ? `${(n / 1024).toFixed(1)} KB` : `${n} B`;
 }
@@ -70,28 +72,45 @@ function download(filename: string, text: string, mime: string) {
 export function ExportCard({ payload }: Props) {
   const toast = useToast();
   const [tier, setTier] = useState<Tier>('full');
-  // 附判读规则速查：给不熟太乙术语的通用模型兜底（仅影响 AI Prompt）
+  // 附判读规则速查：给不熟太乙术语的通用模型兜底（仅影响 AI Prompt；仅太乙主盘可用）
   const [withRules, setWithRules] = useState(false);
+  // 流卦運多期默认不导出（参照 react-8char 流日/流时勾选制）：相位卦易被 AI 误当规范年卦，
+  // 且会把 yijingRefs 撑入大量流卦全文
+  const [withLiu, setWithLiu] = useState(false);
 
-  const effective = useMemo(() => (tier === 'lite' ? stripHeavy(payload) : payload), [tier, payload]);
+  const basePayload = useMemo(
+    () => (payload.liuTimelines && !withLiu ? { ...payload, liuTimelines: null } : payload),
+    [payload, withLiu],
+  );
+  const effective = useMemo(() => (tier === 'lite' ? stripHeavy(basePayload) : basePayload), [tier, basePayload]);
   // TOON 格式（github.com/toon-format/toon）：语义等价 JSON、面向 LLM 省 token（实测全量约省 1/3）
   const toon = useMemo(() => toTOONText(effective), [effective]);
+  const markdown = useMemo(() => toMarkdown(effective), [effective]);
 
-  const buildPrompt = () => {
-    const base = generateAIPrompt(effective);
-    return withRules ? `${base}\n\n${KNOWLEDGE_APPENDIX}` : base;
-  };
+  // AI Prompt 两个版本常备（体积随勾选实时切换显示）
+  const basePrompt = useMemo(() => generateAIPrompt(effective), [effective]);
+  const rulesPrompt = useMemo(() => `${basePrompt}\n\n${KNOWLEDGE_APPENDIX}`, [basePrompt]);
+  const promptText = withRules ? rulesPrompt : basePrompt;
+  const promptBytes = useMemo(() => bytesOf(promptText), [promptText]);
+  const rulesDelta = useMemo(() => bytesOf(rulesPrompt) - bytesOf(basePrompt), [rulesPrompt, basePrompt]);
+  const mdBytes = useMemo(() => bytesOf(markdown), [markdown]);
 
-  // 两档体积对照（字节 + 估算 token），供选择
+  // 两档体积对照（字节 + 估算 token），供选择；随流卦勾选联动
   const sizes = useMemo(() => {
-    const enc = new TextEncoder();
-    const full = toTOONText(payload);
-    const lite = toTOONText(stripHeavy(payload));
+    const full = toTOONText(basePayload);
+    const lite = toTOONText(stripHeavy(basePayload));
     return {
-      full: { bytes: enc.encode(full).length, tokens: estimateTokens(full) },
-      lite: { bytes: enc.encode(lite).length, tokens: estimateTokens(lite) },
+      full: { bytes: bytesOf(full), tokens: estimateTokens(full) },
+      lite: { bytes: bytesOf(lite), tokens: estimateTokens(lite) },
     };
-  }, [payload]);
+  }, [basePayload]);
+
+  // 流卦增量按当前详略档实算（含其连带撑大的 yijingRefs 流卦经文）
+  const liuDelta = useMemo(() => {
+    if (!payload.liuTimelines) return 0;
+    const withL = tier === 'lite' ? stripHeavy(payload) : payload;
+    return bytesOf(toTOONText(withL)) - bytesOf(toTOONText({ ...withL, liuTimelines: null }));
+  }, [payload, tier]);
 
   const hasHeavy = Boolean(
     (payload.kintaiyiPan && Object.keys(payload.kintaiyiPan).length)
@@ -120,7 +139,10 @@ export function ExportCard({ payload }: Props) {
     <section className="card export-card glow-gold">
       <div className="export-head">
         <h3>☖ 数据导出 · AI 分析</h3>
+      </div>
+      <div className="export-sub">
         <span className="ready-badge">✧ 已备好投喂 AI</span>
+        <span className="export-note">Markdown 内容最全且人机皆读；TOON 为 JSON 的紧凑等价表示，更省 token</span>
       </div>
 
       {hasHeavy && (
@@ -156,31 +178,51 @@ export function ExportCard({ payload }: Props) {
         <p className="tier-note single">本次导出 {fmtBytes(cur.bytes)} · {fmtTokens(cur.tokens)}（未含大段上游釋文，无需精简）。</p>
       )}
 
+      <div className="export-opts">
+        {payload.liuTimelines && (
+          <label className="rules-toggle">
+            <input type="checkbox" checked={withLiu} onChange={(e) => setWithLiu(e.target.checked)} />
+            <span>附流卦運多期（流年/月/日/時/分相位卦；易被 AI 误当规范年卦冲淡值年卦，默认不导出）</span>
+            <em className={`rules-delta${withLiu ? ' on' : ''}`}>{withLiu ? '已附 ' : ''}+{fmtBytes(liuDelta)}</em>
+          </label>
+        )}
+        {payload.result && (
+          <label className="rules-toggle">
+            <input type="checkbox" checked={withRules} onChange={(e) => setWithRules(e.target.checked)} />
+            <span>AI Prompt 附「判读规则速查」（十六神/算数属性/格局条件/八门神煞通则，供不熟太乙术语的通用模型兜底）</span>
+            <em className={`rules-delta${withRules ? ' on' : ''}`}>{withRules ? '已附 ' : ''}+{fmtBytes(rulesDelta)}</em>
+          </label>
+        )}
+      </div>
+
+      {/* 数据文件（复制走下方喂 AI 按钮，不设单独「复制 TOON」以免重复） */}
       <div className="export-grid">
         <button type="button" className="btn-outline" onClick={() => { download(`${stamp()}.toon`, toon, 'text/plain'); toast('TOON 文件已下载'); }}>
-          ⤓ 导出 TOON 文件
+          ⤓ 导出 TOON 文件（<em key={`t-${tier}-${withLiu}`} className="size-flash">{fmtBytes(cur.bytes)}</em>）
         </button>
-        <button type="button" className="btn-outline" onClick={() => doCopy(toon, 'TOON 已复制到剪贴板')}>
-          ⧉ 复制 TOON
+        <button type="button" className="btn-outline" onClick={() => { download(`${stamp()}.md`, markdown, 'text/markdown'); toast('Markdown 文件已下载'); }}>
+          ⤓ 导出 Markdown 文件（<em key={`m-${tier}-${withLiu}`} className="size-flash">{fmtBytes(mdBytes)}</em>）
         </button>
-        <button type="button" className="btn-outline" onClick={() => doCopy(toMarkdown(effective), 'Markdown 已复制到剪贴板')}>
-          ⧉ 复制 Markdown
-        </button>
-        <button type="button" className="btn-outline" onClick={() => { download(`${stamp()}.md`, toMarkdown(effective), 'text/markdown'); toast('Markdown 文件已下载'); }}>
-          ⤓ 下载 .md
+      </div>
+
+      {/* 一键喂 AI */}
+      <div className="export-grid">
+        <button
+          type="button"
+          className="btn-crimson"
+          onClick={() => doCopy(promptText, 'AI 分析 Prompt 已复制！粘贴给 ChatGPT / Claude 即可')}
+        >
+          ✦ 复制 AI Prompt（TOON · <em key={`p-${tier}-${withLiu}-${withRules}`} className="size-flash">{fmtBytes(promptBytes)}</em>）
         </button>
         <button
           type="button"
           className="btn-crimson"
-          onClick={() => doCopy(buildPrompt(), 'AI 分析 Prompt 已复制！粘贴给 ChatGPT / Claude 即可')}
+          onClick={() => doCopy(markdown, 'Markdown 已复制！粘贴给 AI，分析更详细')}
         >
-          ✦ 一键复制 AI Prompt
+          ⧉ 复制 AI 分析（Markdown · <em key={`c-${tier}-${withLiu}`} className="size-flash">{fmtBytes(mdBytes)}</em>）
         </button>
       </div>
-      <label className="rules-toggle">
-        <input type="checkbox" checked={withRules} onChange={(e) => setWithRules(e.target.checked)} />
-        AI Prompt 附「判读规则速查」（十六神/算数属性/格局条件/八门神煞通则，供不熟太乙术语的通用模型兜底）
-      </label>
+
       <div className="json-preview">
         <pre>{toon.slice(0, 2000)}{toon.length > 2000 ? '\n…' : ''}</pre>
       </div>
