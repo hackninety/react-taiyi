@@ -84,8 +84,8 @@ function solarText(solarTime?: SolarTimeInfo | null): string {
 const residenceText = (r: NonNullable<ExportPayload['residence']>): string => r.text;
 
 const YIJING_CTX_NOTE =
-  '本盘所有出现之卦（值卦/命法卦链/皇极各层/流卦）的《周易》通行本卦辞、爻辞原文见 yijingRefs 字段（ctext 权威公版）。'
-  + '凡引用卦爻辞，务必以 yijingRefs 为准、勿凭记忆背诵，以免错位串卦；皇极变爻、流卦动爻所值之爻见各卦「本盘动爻」。';
+  '本盘所有出现之卦（值卦/命法卦链/皇极各层/流卦）的《周易》通行本卦辞与本盘动爻（皇极变爻/流卦动爻）之爻辞原文见 yijingRefs 字段（ctext 权威公版）。'
+  + '凡引用卦爻辞，务必以 yijingRefs 为准、勿凭记忆背诵，以免错位串卦；未收录之爻辞（非本盘动爻）请勿凭记忆引述。';
 
 const inquiryText = (q: NonNullable<ExportPayload['inquiry']>): string =>
   `【${q.topic}】${q.text ?? ''}`.trim();
@@ -123,7 +123,7 @@ export function buildMeta(payload: ExportPayload): ExportMeta {
   if (payloadHasPan) modules.push('kintaiyi 全解释盘（統宗寶鑑诸卷）');
   if (liuTimelines) modules.push('流卦運多期（流年/月/日/時/分）');
   if (historyExamples?.length) modules.push('局數史例對照');
-  if (buildYijingRefs(payload)) modules.push('周易经文附录（出现之卦的卦辞爻辞原文）');
+  if (buildYijingRefs(payload)) modules.push('周易经文附录（出现之卦的卦辞与动爻爻辞原文）');
 
   return {
     应用: 'react-taiyi 太乙神数排盘',
@@ -211,10 +211,12 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
 
   ctx.格局 = Object.keys(r.geJu).map((k) => `${k}：${r.geJu[k]}`);
 
+  // 斷辭全文只放 mishuText 一处（归集仅留指引），防 AI 把双份全文当两处独立来源互证
   const mishu = getMishu(r.kook.dun, r.kook.num);
   if (mishu) {
     ctx.秘書局斷 =
-      `《太乙秘書》${r.kook.dun}遁第 ${r.kook.num} 局經典總斷（主客勝負與趨避以此為綱，與盤面數據互證）：${mishu.text}`;
+      `本局有《太乙秘書》${r.kook.dun}遁第 ${r.kook.num} 局經典總斷，主客勝負與趨避以此為綱、與盤面數據互證；`
+      + '全文見 mishuText 字段（Markdown 見「《太乙秘書》本局斷辭」节），勿另憑記憶引述。';
   }
 
   ctx.值卦与周期 =
@@ -263,6 +265,9 @@ export function buildAnalysisContext({ result: r, mingfa, solarTime, huangji, hu
   return ctx;
 }
 
+/** 爻位序名（皇极 yaoName 口径），用于归一为该卦实际爻名 */
+const YAO_POS = ['初', '二', '三', '四', '五', '上'];
+
 /** 收集 payload 中出现的所有卦名（原始串，可能带卦符/繁简/異體「無」）与其被引用的动爻 */
 function collectGuaRefs(p: ExportPayload): { names: string[]; yaoByGua: Map<string, Set<string>> } {
   const names: string[] = [];
@@ -270,8 +275,11 @@ function collectGuaRefs(p: ExportPayload): { names: string[]; yaoByGua: Map<stri
   const addYao = (gua: string, yao: string) => {
     const h = getHexagram(gua);
     if (!h) return;
+    // 皇极层 yaoName 为爻位（初/二/…/上），归一成实际爻名（初九/六二…）以对齐爻辞；流卦爻名本就是全名
+    const pos = YAO_POS.indexOf(yao);
+    const name = pos >= 0 ? h.yao[pos]?.name ?? yao : yao;
     if (!yaoByGua.has(h.name)) yaoByGua.set(h.name, new Set());
-    yaoByGua.get(h.name)!.add(yao);
+    yaoByGua.get(h.name)!.add(name);
   };
 
   const r = p.result;
@@ -301,11 +309,21 @@ function collectGuaRefs(p: ExportPayload): { names: string[]; yaoByGua: Map<stri
   return { names, yaoByGua };
 }
 
+/** 周易经文附录条目：卦辞恒有；有动爻之卦另附动爻列表与动爻爻辞原文 */
+export interface YijingRef {
+  卦: string;
+  符: string;
+  卦辞: string;
+  本盘动爻?: string[];
+  动爻爻辞?: string[];
+}
+
 /**
- * 《周易》经文附录：为盘面/皇极/流卦/命法出现的每个卦附上卦辞与爻辞原文（ctext 权威公版），
- * 抑制 LLM 背诵爻辞时的错位串卦。标注被引用的动爻（皇极变爻/流卦动爻）便于 AI 定位。
+ * 《周易》经文附录：为盘面/皇极/流卦/命法出现的每个卦附上卦辞原文，动爻卦（皇极变爻/流卦动爻）
+ * 另附动爻爻辞（ctext 权威公版），抑制 LLM 背诵爻辞时的错位串卦。
+ * 非动爻爻辞不收录——全量爻辞反给 AI 张冠李戴的原料并稀释注意力；说明文字同步告知勿凭记忆补引。
  */
-export function buildYijingRefs(payload: ExportPayload) {
+export function buildYijingRefs(payload: ExportPayload): YijingRef[] | null {
   const { names, yaoByGua } = collectGuaRefs(payload);
   const seen = new Map<number, YiHexagram>();
   for (const raw of names) {
@@ -313,19 +331,23 @@ export function buildYijingRefs(payload: ExportPayload) {
     if (hx) seen.set(hx.num, hx);
   }
   if (seen.size === 0) return null;
-  const list = [...seen.values()]
+  return [...seen.values()]
     .sort((a, b) => a.num - b.num)
     .map((hx) => {
       const dong = yaoByGua.get(hx.name);
+      const dongList = dong && dong.size ? [...dong] : null;
       return {
         卦: hx.name,
         符: hx.symbol,
         卦辞: hx.guaCi,
-        爻辞: hx.yao.map((y) => `${y.name}：${y.text}`),
-        ...(dong && dong.size ? { 本盘动爻: [...dong] } : {}),
+        ...(dongList
+          ? {
+            本盘动爻: dongList,
+            动爻爻辞: hx.yao.filter((y) => dongList.includes(y.name)).map((y) => `${y.name}：${y.text}`),
+          }
+          : {}),
       };
     });
-  return list;
 }
 
 /** 导出对象（JSON/TOON 共用同一结构，字段路径一致） */
@@ -336,9 +358,9 @@ export function buildExportObject(payload: ExportPayload): Record<string, unknow
   } = payload;
   const mishuEntry = result ? getMishu(result.kook.dun, result.kook.num) : null;
   const yijingRefs = buildYijingRefs(payload);
+  // 不含导出时间戳：与起局时间无关的「当前时间」会被 AI 掺进应期推断，历史盘/未来盘尤甚
   return {
     app: 'react-taiyi',
-    exportedAt: new Date().toISOString(),
     meta: buildMeta(payload),
     analysisContext: buildAnalysisContext(payload),
     ...(solarTime?.timezone || solarTime?.applied ? { solarTime } : {}),
@@ -367,12 +389,13 @@ export function buildExportObject(payload: ExportPayload): Record<string, unknow
     ...(historyExamples?.length ? { historyExamples } : {}),
     // 流卦運多期（流年12/流月12/流日15/流時12辰/流分10；首期即起局时刻）
     ...(liuTimelines ? { liuTimelines } : {}),
-    // 周易经文附录（ctext 权威公版）：本盘出现之卦的卦辞爻辞原文，供 AI 精确引用、防错位串卦
+    // 周易经文附录（ctext 权威公版）：本盘出现之卦的卦辞与动爻爻辞原文，供 AI 精确引用、防错位串卦
     ...(yijingRefs
       ? {
         yijingRefs: {
-          说明: '本盘（值卦/命法卦链/皇极各层含变爻/流卦动爻）出现之卦的《周易》通行本卦辞、爻辞原文，'
-            + '源自 ctext.org 公版经文。引用卦爻辞时请以此为准，勿凭记忆——「本盘动爻」为皇极变爻/流卦动爻所值之爻。',
+          说明: '本盘（值卦/命法卦链/皇极各层含变爻/流卦动爻）出现之卦的《周易》通行本卦辞，'
+            + '动爻卦另附动爻爻辞原文，源自 ctext.org 公版经文。引用卦爻辞时请以此为准，勿凭记忆——'
+            + '「本盘动爻」为皇极变爻/流卦动爻所值之爻；未收录之爻辞（非动爻）请勿凭记忆引述。',
           卦: yijingRefs,
         },
       }
@@ -413,23 +436,17 @@ function pushHuangjiSection(L: string[], huangji: HuangjiInfo): void {
   L.push('');
 }
 
-/** 周易经文 Markdown 段（主盘/仅皇极两种模式共用）：卦辞 + 动爻爻辞（完整爻辞见 JSON） */
+/** 周易经文 Markdown 段（主盘/仅皇极两种模式共用）：卦辞 + 动爻爻辞（与 yijingRefs 同口径） */
 function pushYijingSection(L: string[], payload: ExportPayload): void {
   const refs = buildYijingRefs(payload);
   if (!refs) return;
   L.push('## 周易经文（本盘出现之卦）');
   L.push('');
-  L.push('ctext 权威公版卦辞/爻辞原文，引用卦爻辞以此为准（勿凭记忆）；完整爻辞见结构化导出 `yijingRefs` 字段。');
+  L.push('ctext 权威公版原文；仅收录卦辞与本盘动爻之爻辞，引用以此为准，未收录之爻辞（非动爻）勿凭记忆引述。');
   L.push('');
   for (const h of refs) {
-    const dong = (h as { 本盘动爻?: string[] }).本盘动爻;
-    L.push(`- **${h.卦}${h.符}**：${h.卦辞}${dong ? `　【本盘动爻：${dong.join('、')}】` : ''}`);
-    if (dong) {
-      for (const yn of dong) {
-        const line = h.爻辞.find((y) => y.startsWith(yn));
-        if (line) L.push(`  - ${line}`);
-      }
-    }
+    L.push(`- **${h.卦}${h.符}**：${h.卦辞}${h.本盘动爻 ? `　【本盘动爻：${h.本盘动爻.join('、')}】` : ''}`);
+    for (const line of h.动爻爻辞 ?? []) L.push(`  - ${line}`);
   }
   L.push('');
 }
@@ -562,14 +579,16 @@ export function toMarkdown(payload: ExportPayload): string {
 
   L.push('## 十六神式盘');
   L.push('');
-  L.push('| 辰位 | 十六神 | 落宫星将 |');
-  L.push('|---|---|---|');
+  // 十精（七曜）独立成列，不与星将混排：混在一格 AI 易把七曜当参与主客算的星将
+  L.push(planets ? '| 辰位 | 十六神 | 落宫星将 | 十精（七曜） |' : '| 辰位 | 十六神 | 落宫星将 |');
+  L.push(planets ? '|---|---|---|---|' : '|---|---|---|');
   for (const chen of BOARD_ORDER) {
     const stars = r.board[chen];
-    const planetsHere = chen !== '中' && planets?.[chen] ? planets[chen].map((p) => `${p}(星)`) : [];
-    const all = [...stars, ...planetsHere];
-    if (all.length === 0) continue;
-    L.push(`| ${chen} | ${chen === '中' ? '中宫' : SIXTEEN_GOD[chen]} | ${all.join('、')} |`);
+    const planetsHere = chen !== '中' && planets?.[chen] ? planets[chen] : [];
+    if (stars.length === 0 && planetsHere.length === 0) continue;
+    const cells = [chen, chen === '中' ? '中宫' : SIXTEEN_GOD[chen], stars.join('、') || '—'];
+    if (planets) cells.push(planetsHere.join('、') || '—');
+    L.push(`| ${cells.join(' | ')} |`);
   }
   L.push('');
 
@@ -669,17 +688,18 @@ export function toMarkdown(payload: ExportPayload): string {
       L.push(`| ${zhi} | ${gong} |`);
     }
     L.push('');
+    // 行限用竖表（年龄段一行一条）：宽横表 LLM 读取易列错位，把限段对到错的年龄
     L.push('### 阳九行限');
     L.push('');
-    L.push(`| ${mingfa.yangjiuXingxian.map(([range]) => range).join(' | ')} |`);
-    L.push(`|${mingfa.yangjiuXingxian.map(() => '---').join('|')}|`);
-    L.push(`| ${mingfa.yangjiuXingxian.map(([, zhi]) => zhi).join(' | ')} |`);
+    L.push('| 年龄段 | 支 |');
+    L.push('|---|---|');
+    for (const [range, zhi] of mingfa.yangjiuXingxian) L.push(`| ${range} | ${zhi} |`);
     L.push('');
     L.push('### 百六行限');
     L.push('');
-    L.push(`| ${mingfa.bailiuXingxian.map(([range]) => range).join(' | ')} |`);
-    L.push(`|${mingfa.bailiuXingxian.map(() => '---').join('|')}|`);
-    L.push(`| ${mingfa.bailiuXingxian.map(([, zhi]) => zhi).join(' | ')} |`);
+    L.push('| 年龄段 | 支 |');
+    L.push('|---|---|');
+    for (const [range, zhi] of mingfa.bailiuXingxian) L.push(`| ${range} | ${zhi} |`);
     L.push('');
     if (kintaiyiLife && Object.keys(kintaiyiLife).length) {
       L.push('### 卷二十釋文');

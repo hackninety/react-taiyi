@@ -868,11 +868,18 @@ body {
 
 .tier-note.single { margin-top: 12px; }
 
+/* 可选项区：流卦附带 / 判读速查两枚勾选，纵向排布 */
+.export-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .rules-toggle {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin-top: 12px;
   font-size: 0.76rem;
   line-height: 1.5;
   color: var(--text-dim);
