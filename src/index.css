@@ -358,6 +358,7 @@ body {
 
 .toggles {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   border-left: 1px solid var(--line);
@@ -737,6 +738,19 @@ body {
   border-radius: 999px;
   vertical-align: middle;
   text-shadow: none;
+  /* 窄屏容器压缩时必须整体横排，否则中文会逐字折行成竖排 */
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* 窄屏：徽标另起一行横排显示，不再挤在勾选项右侧。
+   flex-basis 100% 触发换行，max-width 再把药丸收回文字宽度（否则边框撑满整行） */
+@media (max-width: 620px) {
+  .toggles .school-badge {
+    flex-basis: 100%;
+    max-width: fit-content;
+    margin-left: 0;
+  }
 }
 
 .school-badge.ok {
