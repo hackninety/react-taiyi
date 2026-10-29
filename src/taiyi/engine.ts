@@ -10,7 +10,9 @@ import {
   GUA_64, SU, SU_GONG, ganzhiWuxing, wuxingRelation, NAYIN_WUXING,
   YANG_DUN_JIEQI, WANGZHUAI, WANGZHUAI_NUM, WANGZHUAI_JIEQI, JIEQI_WANG_GONG,
   JI_NAME, METHOD_NAME, toCn, FIVE_YUAN_HEADS, jiaziRing72,
+  TAIYI_MIN_YEAR, TAIYI_MAX_YEAR,
 } from './constants';
+import { HUANGJI_MIN_YEAR, HUANGJI_MAX_YEAR } from './huangji';
 import { gangzhi, lunarDate, currentJieqi, daysBetween } from './calendar';
 import { hjGangzhi, hjLunar, hjJieqi, hjDaysBetween } from './huangjiCalendar';
 import { rotate, modOr, mod, divide, byIndex1, byCycle1, JIAZI } from './utils';
@@ -941,6 +943,12 @@ export class TaiyiEngine {
 /** 主入口：一次排盘。calendarMode='huangji' 时用皇极拟推历法（全跨度，须标注口径） */
 export function calculateTaiyi(input: TaiyiInput, calendarMode: CalendarMode = 'standard'): TaiyiResult {
   const { year, month, day, hour, minute, jiStyle, acumYear } = input;
+  // 这里检查的是地点校正后的实际输入，不能只依赖表单原始年份的范围判定。
+  const minYear = calendarMode === 'standard' ? TAIYI_MIN_YEAR : HUANGJI_MIN_YEAR;
+  const maxYear = calendarMode === 'standard' ? TAIYI_MAX_YEAR : HUANGJI_MAX_YEAR;
+  if (!Number.isInteger(year) || year < minYear || year > maxYear) {
+    throw new RangeError(`实际排盘年份 ${year} 超出${calendarMode === 'standard' ? '标准历法' : '皇极拟推'}范围 ${minYear}–${maxYear}`);
+  }
   const e = new TaiyiEngine(year, month, day, hour, minute, calendarMode);
 
   const kook = e.kook(jiStyle, acumYear);

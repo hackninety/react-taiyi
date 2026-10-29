@@ -40,8 +40,9 @@ export function browserTimeZone(): string {
 export function browserTzOffsetMinutes(
   year: number, month: number, day: number, hour: number, minute: number,
 ): number {
-  const d = new Date(2000, month - 1, day, hour, minute);
-  d.setFullYear(year + (d.getFullYear() - 2000));
+  const d = new Date(0);
+  d.setFullYear(year, month - 1, day);
+  d.setHours(hour, minute, 0, 0);
   return -d.getTimezoneOffset();
 }
 
@@ -114,14 +115,17 @@ export function applyTrueSolarTime(
   tzOffsetMinutes: number,
 ): { year: number; month: number; day: number; hour: number; minute: number; offsetMinutes: number } {
   const offsetMinutes = Math.round(longitude * 4 - tzOffsetMinutes);
-  const d = new Date(2000, month - 1, day, hour, minute + offsetMinutes);
-  d.setFullYear(year + (d.getFullYear() - 2000));
+  // 先按真实年份建立墙上钟日期，再平移分钟；2000 年锚点会把平年二月底算成闰年。
+  // UTC 这里只是无宿主时区/DST 干扰的日期算术，不改变调用方指定的解释时区。
+  const d = new Date(0);
+  d.setUTCFullYear(year, month - 1, day);
+  d.setUTCHours(hour, minute + offsetMinutes, 0, 0);
   return {
-    year: d.getFullYear(),
-    month: d.getMonth() + 1,
-    day: d.getDate(),
-    hour: d.getHours(),
-    minute: d.getMinutes(),
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+    hour: d.getUTCHours(),
+    minute: d.getUTCMinutes(),
     offsetMinutes,
   };
 }
