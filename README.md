@@ -6,6 +6,8 @@ React + TypeScript 前后端排盘应用。支持
 太乙淘金歌 / 太乙局**四种积年流派，输出十六神式盘、主客定算三将、
 格局（掩迫关囚击格对提挟执提四郭固四郭杜）、八门、神煞与值年卦。
 
+AI 可直接使用[统一远程 MCP](#在-ai-中使用统一远程-mcp)，输入起局时间后排盘；需要本项目的经典原文与 kintaiyi 释文时，连接下方[太乙专用 MCP](#太乙专用-mcp本机-14-个工具)。两者的工具、输入参数和历法范围分别说明。
+
 扩展功能：
 
 - **太乙命法**：命法积数、三才数、十二命宫（男女顺逆）、阳九/百六行限、
@@ -26,7 +28,7 @@ React + TypeScript 前后端排盘应用。支持
   皇极以**冬至换岁**定位岁内天数（1–360）后逐层取卦；
   岁卦采用**黄畿**派（运卦→经卦→挨六十卦次，已对照原文校验）；
   祝泌派（先天六十卦序平推）暂未对照《皇极经世书解》原文，**已关闭不用**。
-  勾选「皇极」即解锁年份输入至**公元前 67016 — 公元 62583**（负数年为公元前）：
+  勾选「皇极」即解锁年份输入至**天文纪年 -67016 — 62583**（0 = 公元前 1 年，-1 = 公元前 2 年）：
   600–9999 内两盘互参；范围外**整张太乙盘改用「皇极历法拟推口径」照常推算**
   （四柱纯干支算术＋天文节气、拟推格里历，农历为节气月建拟推，盘面与导出显著标注），
   经 1582 年后共同区间与标准口径逐字段同盘的交叉验证；
@@ -75,7 +77,61 @@ React + TypeScript 前后端排盘应用。支持
   先誊「盘面事实清单」再分析，含「应期推断」专节与分析后自检段（反幻觉工程），
   可选附「判读规则速查」给不熟太乙术语的通用模型兜底；导出分**完整/精简**两档并实时显示体积与估算 token
 
-## MCP 服务器（让 AI 直接调用排盘做多轮推理）
+## 在 AI 中使用统一远程 MCP
+
+在支持 MCP 的 AI 客户端中连接 **`https://mcp.0x7c.cc/mcp`**，协议选 **Streamable HTTP**，认证选 **无认证**；不需要下载本仓库或提供 MCP 访问令牌。
+
+```powershell
+# Codex
+codex mcp add paipan-common-remote --url https://mcp.0x7c.cc/mcp
+codex mcp list
+```
+
+```powershell
+# Claude Code（当前用户的所有项目可用）
+claude mcp add --transport http --scope user paipan-common-remote https://mcp.0x7c.cc/mcp
+claude mcp get paipan-common-remote
+```
+
+参见 [Codex 官方 MCP 文档](https://learn.chatgpt.com/docs/extend/mcp)与 [Claude Code 官方 MCP 文档](https://code.claude.com/docs/en/mcp)。保存后重连 MCP 或重新打开会话，让 AI 调用 `system_catalog` 确认连接。已使用本机 `paipan-common` 的用户可继续使用，通常与远程连接二选一，不必重复添加。
+
+统一服务提供 `system_catalog`、`chart_calculate`、`prepare_reading`、`corpus_list`、`corpus_search`、`corpus_read` 六个工具，共十类排盘；本项目相关系统为：
+
+| 系统 | 必需输入 | 统一服务范围 |
+|---|---|---|
+| `taiyi` 太乙起局 | `eventTime`：公历日期、时分、明确时区 | `jiStyle` 0–4（年/月/日/时/分计），`acumYear` 0–3（统宗/金镜/淘金歌/太乙局）；`calendarMode` 默认标准历法，皇极拟推须显式选择 |
+| `taiyi_mingfa` 太乙命法 | `birth`：出生日期、时分、时区、性别；另给 `queryTime` | 求测瞬间转换到出生地时区后计算；可按目录启用出生地点校正 |
+| `huangji` 皇极经世 | `eventTime` | 已校订黄畿派 |
+
+统一接口只接受公元 0001–9999，太乙标准历法与命法进一步限制为 600–9999；标准历法还拒绝 1582-10-05 至 14、9999-12-31 及晚子换日进入这些日期的输入。太乙皇极拟推须明确选择 `calendarMode: "huangji"`，不会自动切换。这些是统一服务的边界，不代表网页与下方专用工具的范围。
+
+复制给 AI 的事件示例：
+
+> 先调用 system_catalog，确认 taiyi 参数。按公历 2026 年 10 月 29 日 14:30、固定 UTC+8（+08:00）、不启用真太阳时，以太乙统宗时计和 standard 历法起普通事件盘，关注主客。使用 prepare_reading，先列盘面事实再解释。若本系统没有 common 文库，请如实说明，不要编造经典命中。
+
+对应 `prepare_reading` 参数：
+
+```json
+{
+  "eventTime": {
+    "date": "2026-10-29",
+    "time": "14:30",
+    "timezone": "+08:00",
+    "trueSolarTime": false
+  },
+  "systems": ["taiyi"],
+  "options": {
+    "taiyi": { "jiStyle": 3, "acumYear": 0, "calendarMode": "standard" }
+  },
+  "question": "主客"
+}
+```
+
+命法示例可指定：男性，公历 1990-05-17 10:30、固定 +08:00 出生，查询 2026-10-29 12:00、固定 +08:00 的太乙命法，不启用地点校正。让 AI 使用 `systems: ["taiyi_mingfa"]`，完整填写 `birth` 和 `queryTime`。普通事件不需要额外询问生日、性别。
+
+时辰与时区不能猜。启用地点校正才提供经度；统一服务将它放在 `eventTime` 或 `birth` 中，`queryTime` 不接受经度/校正开关。太乙采用**经度平太阳时**，不含均时差。统一服务目前没有 `taiyi` / `taiyi_mingfa` / `huangji` 对应的 common 文库；下方专用工具所带典籍与后端释文未自动加入统一服务。两套服务都由 AI 客户端承担最终推理。
+
+## 太乙专用 MCP（本机 14 个工具）
 
 仓库内建 [MCP](https://modelcontextprotocol.io)（Model Context Protocol）server（`mcp/`），把本地引擎与
 kintaiyi 后端封装为 **14 个工具**，供 Claude Code / Claude Desktop 等 AI 多轮调用推理——从「一次性投喂
@@ -91,14 +147,21 @@ kintaiyi 后端封装为 **14 个工具**，供 Claude Code / Claude Desktop 等
 | `kintaiyi_pan` / `kintaiyi_life` | 后端透传《統宗寶鑑》诸卷 97 键 / 命法卷二十 59 键——**不带 keys 先返回键目录（含体积），再按 keys 取键**，防上下文爆量 |
 | `kintaiyi_liu` / `taiyi_history_examples` / `kintaiyi_docs` / `taiyi_status` | 流卦運多期 / 局數史例（67 例） / 上游文档（query 行过滤） / 引擎与后端状态 |
 
-在本仓库打开 Claude Code 会经 `.mcp.json` 自动发现；其他项目 / 全局注册：
+先在本仓库执行 `npm ci` 安装依赖。在本仓库使用 Claude Code 时，可按客户端提示启用 `.mcp.json`；其他项目或全局注册可使用本机依赖的绝对路径（以下为 Windows 示例，其他机器替换实际目录，按所用客户端选择一条）：
 
-```bash
-claude mcp add taiyi -- npx tsx D:\WWW\react-taiyi\mcp\main.ts
+```powershell
+codex mcp add taiyi -- node D:/WWW/react-taiyi/node_modules/tsx/dist/cli.mjs D:/WWW/react-taiyi/mcp/main.ts
+claude mcp add --transport stdio --scope user taiyi -- node D:/WWW/react-taiyi/node_modules/tsx/dist/cli.mjs D:/WWW/react-taiyi/mcp/main.ts
 ```
 
 环境变量 `TAIYI_API` 覆盖后端地址（默认 `https://taiyi-api.0x7c.cc`）。
-年份约定：工具输入均为**天文纪年**（0 = 公元前 1 年）。协议级测试见 `tests/mcp.test.ts`。
+年份约定：工具输入均为**天文纪年**（0 = 公元前 1 年）；皇极范围为 -67016..62583。专用 `taiyi_chart` 超出标准范围时会自动标注并切换皇极拟推，与统一服务须显式选择的规则不同。协议级测试见 `tests/mcp.test.ts`。
+
+本机 `taiyi_chart` 的地点校正使用 `trueSolarLongitude` 与 `tzOffsetMinutes`（后者缺省 480），并未提供统一 MCP 的 IANA `timezone` 解析；跨时区输入须先确认当地偏移。独立 `taiyi_mingfa` 工具当前未开放地点校正和 `queryTime`，流卦基准采用运行机器的当前日期；需要指定求测时刻时使用统一 MCP 的 `taiyi_mingfa` 系统。
+
+给 AI 的专用工具示例：
+
+> 使用 taiyi 本机 MCP，以公历 2026 年 10 月 29 日 14:30 的 UTC+8 钟表时间起太乙统宗时计盘，不启用地点校正。先调用 taiyi_chart，读取 meta 锁定口径，再查 taiyi_mishu 和 yijing_text；需要金镜原文时用 taiyi_classics，需后端释文时先取 kintaiyi_pan 的键目录，再按 keys 读取。引用盘面与原文后再分析，不要把不同流派的断辞混用。
 
 ## 算法来源
 
@@ -172,7 +235,7 @@ tests/              # vitest 对照测试
   kintaiyi/sxtwl **中国古历表**口径（与上游 demo 公元前排盘同款同源；装配器
   `remoteResult.ts` 经黄金用例逐字段守卫），皇极经世历卡恒显；后端不可用自动回退拟推并提示。
   流卦運多期不支持公元前（上游 hex_timeline 依 Python datetime，下限公元 1 年）
-- **勾选「皇极」= 盘面改用「皇极历法拟推口径」并解锁一元全跨度**（公元前 67016 — 公元 62583）：
+- **勾选「皇极」= 盘面改用「皇极历法拟推口径」并解锁一元全跨度**（天文纪年 -67016 — 62583）：
   四柱按纯干支算术＋天文节气推得（拟推格里历），农历为节气月建拟推，属现代拟推、非古历考据。
   验证锚点：该口径在 1582 年后与标准口径逐字段同盘（交叉验证锁定）；
   **公元前年计局数与年柱已同上游 kintaiyi 经 67 条局數史例逐行对照一致**
