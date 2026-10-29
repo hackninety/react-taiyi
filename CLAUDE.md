@@ -19,5 +19,5 @@ Claude Code 在本仓库工作时遵循的项目约定。
 ## 项目速览
 
 - 太乙神数排盘：React 18 + TypeScript + Vite；算法参照 kentang2017/kintaiyi（MIT）。
-- 常用命令：`npm test`（vitest）、`npm run build`（tsc + vite）、`npm run mcp`（内建 MCP server）。
+- 常用命令：`npm test`（vitest）、`npm run build`（tsc + vite）；14 项 MCP 能力已迁入关联 `react-mcp`，统一连接 `paipan-common`。
 - 关键路径：导出 `src/taiyi/export.ts`（TOON/JSON/Markdown）、AI 提示词 `src/lib/prompt.ts`、判读规则速查 `src/lib/knowledge.ts`、导出卡 UI `src/components/ExportCard.tsx`。

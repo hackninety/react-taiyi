@@ -6,7 +6,7 @@ React + TypeScript 前后端排盘应用。支持
 太乙淘金歌 / 太乙局**四种积年流派，输出十六神式盘、主客定算三将、
 格局（掩迫关囚击格对提挟执提四郭固四郭杜）、八门、神煞与值年卦。
 
-AI 可直接使用[统一远程 MCP](#在-ai-中使用统一远程-mcp)，输入起局时间后排盘；需要本项目的经典原文与 kintaiyi 释文时，连接下方[太乙专用 MCP](#太乙专用-mcp本机-14-个工具)。两者的工具、输入参数和历法范围分别说明。
+AI 可直接使用[统一 MCP](#在-ai-中使用统一远程-mcp)：输入起局时间排盘，按需检索 common、读取太乙经典和后端释文。原太乙专用工具已并入同一入口。
 
 扩展功能：
 
@@ -84,21 +84,27 @@ AI 可直接使用[统一远程 MCP](#在-ai-中使用统一远程-mcp)，输入
 
 在支持 MCP 的 AI 客户端中连接 **`https://mcp.0x7c.cc/mcp`**，协议选 **Streamable HTTP**，认证选 **无认证**；不需要下载本仓库或提供 MCP 访问令牌。
 
+统一服务 `paipan-common` 提供 **31 个工具**：6 个跨术数排盘与 common 检索基础工具、11 个 `bazi_` 八字高级工具、14 个 `taiyi_` 太乙高级工具；另有 7 个提示词和 5 个静态资源。本机 stdio 与远程 HTTP 使用同一套能力，每次传完整参数，不使用旧 `chartId`。
+
+`prepare_reading.searchQueries` 可明确提供 1–3 个检索关键词，原问题保留在 `question`，结果会返回实际关键词。
+
+首次配置时按所用客户端选择一条；本机 stdio 与远程 HTTP 二选一。已存在 `paipan-common` 时先在客户端移除旧同名连接再更换方式，旧 `bazi`、`taiyi`、`paipan-common-remote` 连接可移除，避免重复注册。保存后重连 MCP。
+
 ```powershell
 # Codex
-codex mcp add paipan-common-remote --url https://mcp.0x7c.cc/mcp
+codex mcp add paipan-common --url https://mcp.0x7c.cc/mcp
 codex mcp list
 ```
 
 ```powershell
 # Claude Code（当前用户的所有项目可用）
-claude mcp add --transport http --scope user paipan-common-remote https://mcp.0x7c.cc/mcp
-claude mcp get paipan-common-remote
+claude mcp add --transport http --scope user paipan-common https://mcp.0x7c.cc/mcp
+claude mcp get paipan-common
 ```
 
 参见 [Codex 官方 MCP 文档](https://learn.chatgpt.com/docs/extend/mcp)与 [Claude Code 官方 MCP 文档](https://code.claude.com/docs/en/mcp)。保存后重连 MCP 或重新打开会话，让 AI 调用 `system_catalog` 确认连接。已使用本机 `paipan-common` 的用户可继续使用，通常与远程连接二选一，不必重复添加。
 
-统一服务提供 `system_catalog`、`chart_calculate`、`prepare_reading`、`corpus_list`、`corpus_search`、`corpus_read` 六个工具，共十类排盘；本项目相关系统为：
+统一服务的六个基础工具为 `system_catalog`、`chart_calculate`、`prepare_reading`、`corpus_list`、`corpus_search`、`corpus_read`，基础接口共十类排盘；本项目相关系统为：
 
 | 系统 | 必需输入 | 统一服务范围 |
 |---|---|---|
@@ -106,7 +112,7 @@ claude mcp get paipan-common-remote
 | `taiyi_mingfa` 太乙命法 | `birth`：出生日期、时分、时区、性别；另给 `queryTime` | 求测瞬间转换到出生地时区后计算；可按目录启用出生地点校正 |
 | `huangji` 皇极经世 | `eventTime` | 已校订黄畿派 |
 
-统一接口只接受公元 0001–9999，太乙标准历法与命法进一步限制为 600–9999；标准历法还拒绝 1582-10-05 至 14、9999-12-31 及晚子换日进入这些日期的输入。太乙皇极拟推须明确选择 `calendarMode: "huangji"`，不会自动切换。这些是统一服务的边界，不代表网页与下方专用工具的范围。
+统一接口只接受公元 0001–9999，太乙标准历法与命法进一步限制为 600–9999；标准历法还拒绝 1582-10-05 至 14、9999-12-31 及晚子换日进入这些日期的输入。太乙皇极拟推须明确选择 `calendarMode: "huangji"`，不会自动切换。这些是六个基础工具的边界；下方太乙高级工具明确选择历法后支持扩展天文年份。
 
 复制给 AI 的事件示例：
 
@@ -132,39 +138,28 @@ claude mcp get paipan-common-remote
 
 命法示例可指定：男性，公历 1990-05-17 10:30、固定 +08:00 出生，查询 2026-10-29 12:00、固定 +08:00 的太乙命法，不启用地点校正。让 AI 使用 `systems: ["taiyi_mingfa"]`，完整填写 `birth` 和 `queryTime`。普通事件不需要额外询问生日、性别。
 
-时辰与时区不能猜。启用地点校正才提供经度；统一服务将它放在 `eventTime` 或 `birth` 中，`queryTime` 不接受经度/校正开关。太乙采用**经度平太阳时**，不含均时差。统一服务目前没有 `taiyi` / `taiyi_mingfa` / `huangji` 对应的 common 文库；下方专用工具所带典籍与后端释文未自动加入统一服务。两套服务都由 AI 客户端承担最终推理。
+时辰与时区不能猜。启用地点校正才提供经度；统一服务将它放在 `eventTime` 或 `birth` 中，`queryTime` 不接受经度/校正开关。太乙采用**经度平太阳时**，不含均时差。`taiyi` / `taiyi_mingfa` / `huangji` 仍没有对应的 common 文库；太乙经典与释文由同一服务的太乙高级工具提供。AI 客户端承担最终推理。
 
-## 太乙专用 MCP（本机 14 个工具）
+## 统一 MCP 的太乙高级工具
 
-仓库内建 [MCP](https://modelcontextprotocol.io)（Model Context Protocol）server（`mcp/`），把本地引擎与
-kintaiyi 后端封装为 **14 个工具**，供 Claude Code / Claude Desktop 等 AI 多轮调用推理——从「一次性投喂
-数据」升级为「排盘 → 查局断辞 → 按需取釋文 → 史例互证 → 应期推断」的工具循环
-（工具结果统一 [TOON](https://github.com/toon-format/toon) 格式，省约 1/3 token；server instructions 已向 AI 说明语法）：
+14 项能力已迁入 [react-mcp](https://github.com/hackninety/react-mcp)，本机和公网均通过 `paipan-common` 调用，旧 `npm run mcp`、项目专用注册及命盘缓存流程已移除。
 
 | 工具 | 说明 |
 |---|---|
-| `taiyi_chart` | **排盘主入口**（本地引擎）：meta 口径 / analysisContext 要点 / 盘面 / 《太乙秘書》局断 / 周易经文附录；可选命法（sex）与真太阳时（经度） |
-| `taiyi_mingfa` / `huangji_calendar` | 太乙命法（本地）；皇极经世历（一元全跨度，本地，黄畿派） |
-| `taiyi_mishu` / `yijing_text` / `taiyi_tenjing` / `taiyi_knowledge` | 《太乙秘書》144 局断辞 / 周易卦爻辞原文 / 十精七曜落位 / 判读规则速查（全本地、零网络） |
-| `taiyi_classics` | 经典原文库（本地）：《太乙金鏡式經》（唐·王希明，四庫全書本）提要+全十卷——金镜流派第一手经典；目录 / 取卷（分段）/ 全书检索 |
-| `kintaiyi_pan` / `kintaiyi_life` | 后端透传《統宗寶鑑》诸卷 97 键 / 命法卷二十 59 键——**不带 keys 先返回键目录（含体积），再按 keys 取键**，防上下文爆量 |
-| `kintaiyi_liu` / `taiyi_history_examples` / `kintaiyi_docs` / `taiyi_status` | 流卦運多期 / 局數史例（67 例） / 上游文档（query 行过滤） / 引擎与后端状态 |
+| `taiyi_chart` | 本地完整排盘；明确 `eventTime` 与 `options.calendarMode`，默认列字段目录 |
+| `taiyi_mingfa` / `taiyi_huangji_calendar` | 命法须 `birth+queryTime`；皇极须 `eventTime` 与 `calendarMode=huangji` |
+| `taiyi_mishu` / `taiyi_yijing_text` / `taiyi_tenjing` / `taiyi_knowledge` | 局断、周易经文、十精表、规则速查；资料按需分页 |
+| `taiyi_classics` | 《太乙金鏡式經》提要及十卷，先目录后指定卷或关键词检索 |
+| `taiyi_kintaiyi_pan` / `taiyi_kintaiyi_life` / `taiyi_kintaiyi_liu` | 外部后端释文与流卦；明确 `calendarMode=upstream`，先键目录再 `keys` 精取 |
+| `taiyi_history_examples` / `taiyi_kintaiyi_docs` / `taiyi_status` | 后端史例、文档及状态；断线不影响本地排盘与经典 |
 
-先在本仓库执行 `npm ci` 安装依赖。在本仓库使用 Claude Code 时，可按客户端提示启用 `.mcp.json`；其他项目或全局注册可使用本机依赖的绝对路径（以下为 Windows 示例，其他机器替换实际目录，按所用客户端选择一条）：
+高级历史事件工具接受 ISO 扩展年份（如 `-002356-03-15`），天文年 0 代表公元前 1 年，皇极范围 `-67016..62583`；历史日期须明确固定时区。历法必须选择，标准历法不会自动改为皇极拟推。长资料按 `keys` / `chapter` / `cursor` 分页，返回结构化 JSON。具体参数以 `system_catalog` 和工具 schema 为准。
 
-```powershell
-codex mcp add taiyi -- node D:/WWW/react-taiyi/node_modules/tsx/dist/cli.mjs D:/WWW/react-taiyi/mcp/main.ts
-claude mcp add --transport stdio --scope user taiyi -- node D:/WWW/react-taiyi/node_modules/tsx/dist/cli.mjs D:/WWW/react-taiyi/mcp/main.ts
-```
+本地 `taiyi_mingfa` 必须明确 `queryTime`，求测瞬间转入出生地时区后计算；后端 `taiyi_kintaiyi_life` 不支持指定求测日期，传入 `queryTime` 会拒绝，流年基准会明确标注为上游服务器当日，不能替代本地指定日期命法。外部地址仅由部署环境 `TAIYI_API` 设置，调用方不能指定任意地址；未配置时外部工具明确报不可用。
 
-环境变量 `TAIYI_API` 覆盖后端地址（默认 `https://taiyi-api.0x7c.cc`）。
-年份约定：工具输入均为**天文纪年**（0 = 公元前 1 年）；皇极范围为 -67016..62583。专用 `taiyi_chart` 超出标准范围时会自动标注并切换皇极拟推，与统一服务须显式选择的规则不同。协议级测试见 `tests/mcp.test.ts`。
+可对 AI 说：使用 paipan-common，先查 system_catalog，再按 2026-10-29 14:30、固定 +08:00、不校正地点，以 taiyi_chart 的 standard 统宗时计起盘；先读取字段目录再精取盘面，然后通过 taiyi_classics 查原文。需要后端释文时说明时间会发送到已配置的后端，再按键分页读取。
 
-本机 `taiyi_chart` 的地点校正使用 `trueSolarLongitude` 与 `tzOffsetMinutes`（后者缺省 480），并未提供统一 MCP 的 IANA `timezone` 解析；跨时区输入须先确认当地偏移。独立 `taiyi_mingfa` 工具当前未开放地点校正和 `queryTime`，流卦基准采用运行机器的当前日期；需要指定求测时刻时使用统一 MCP 的 `taiyi_mingfa` 系统。
-
-给 AI 的专用工具示例：
-
-> 使用 taiyi 本机 MCP，以公历 2026 年 10 月 29 日 14:30 的 UTC+8 钟表时间起太乙统宗时计盘，不启用地点校正。先调用 taiyi_chart，读取 meta 锁定口径，再查 taiyi_mishu 和 yijing_text；需要金镜原文时用 taiyi_classics，需后端释文时先取 kintaiyi_pan 的键目录，再按 keys 读取。引用盘面与原文后再分析，不要把不同流派的断辞混用。
+本机部署在有仓库权限的 `react-mcp` 中执行 `npm ci`、`npm run build`，将客户端命令设为 `node D:/WWW/react-mcp/dist/stdio.mjs`（按实际目录替换），与公网方式二选一。
 
 ## 算法来源
 
@@ -172,7 +167,7 @@ claude mcp add --transport stdio --scope user taiyi -- node D:/WWW/react-taiyi/n
 |---|---|
 | [kentang2017/kintaiyi](https://github.com/kentang2017/kintaiyi)（MIT） | 主要移植蓝本：积年积算、七十二局表、十六神、主客定算三将、格局、八门、神煞；并作为黄金用例参考实现。经 [python-taiyi](https://github.com/hackninety/python-taiyi) 后端**直接运行其源码**（后端优先数据源 + 原生圆盘 SVG），随上游更新。另移植其 `taiyimishu`（《太乙秘書》144 局断辞，见 `scripts/gen_mishu.py`） |
 | [Chinese Text Project (ctext.org)](https://ctext.org/book-of-changes) | 《周易》通行本卦辞/爻辞公版经文源（`scripts/gen_yijing.py` 抓取生成 `src/taiyi/yijing.ts`，卦符逐卦核验；用于 AI 导出经文附录反幻觉） |
-| [维基文库](https://zh.wikisource.org/wiki/太乙金鏡式經_(四庫全書本)) | 《太乙金鏡式經》（唐·王希明，四庫全書本）公版全文（`scripts/gen_jinjing.py` 生成 `mcp/data/jinjing.json`，供 MCP 工具 `taiyi_classics`；金镜流派第一手经典） |
+| [维基文库](https://zh.wikisource.org/wiki/太乙金鏡式經_(四庫全書本)) | 《太乙金鏡式經》（唐·王希明，四庫全書本）公版全文（`scripts/gen_jinjing.py` 生成 `mcp/data/jinjing.json`，作为统一 MCP 工具 `taiyi_classics` 的来源快照；金镜流派第一手经典） |
 | [hhszzzz/taibu](https://github.com/hhszzzz/taibu) | 工程架构参考（domain 分层）；其“太乙”为九星简化视角，未采用 |
 | [dglijin-oss/taiyi-skill](https://github.com/dglijin-oss/taiyi-skill) | 格局解读规则参考 |
 | [yhys-core / react-yhys](https://github.com/hackninety/react-yhys)（姊妹项目，git 依赖引用） | 皇极经世历：元会运世层级、先天六十卦序、黄畿派岁卦（已校订原文；祝泌派未校订、已关闭），及黄畿岁以下月经/旬纬/日/时经卦（岁卦逐层变爻·挨卦，`getSolarTerm().huangji.dayOfYear` 冬至换岁定位）。作为 npm 包直接引用，随上游更新 |
@@ -224,7 +219,7 @@ src/taiyi/          # 排盘引擎（纯 TS，不依赖 React）
   types.ts, utils.ts, index.ts
 src/lib/            # prompt.ts（AI 提示词）、knowledge.ts（判读规则速查）等
 src/components/     # InputPanel / Board（5×5 十六神式盘）/ ResultPanel / ExportCard
-mcp/                # MCP server（tools.ts 工具逻辑 / server.ts 协议接线 / main.ts stdio 入口）
+mcp/data/           # 金镜经典原始资料归档；MCP 服务代码已迁往 react-mcp
 scripts/            # 生成器：gen_fixtures.py（黄金用例）/ verify_examples.py（局數史例）
                     #        gen_mishu.py（太乙秘書）/ gen_yijing.py（周易经文）
 tests/              # vitest 对照测试

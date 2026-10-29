@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "taiyi": {
-      "command": "cmd",
-      "args": ["/c", "npx", "tsx", "mcp/main.ts"]
-    }
-  }
-}
