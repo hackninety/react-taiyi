@@ -358,6 +358,7 @@ body {
 
 .toggles {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   border-left: 1px solid var(--line);
@@ -737,6 +738,19 @@ body {
   border-radius: 999px;
   vertical-align: middle;
   text-shadow: none;
+  /* 窄屏容器压缩时必须整体横排，否则中文会逐字折行成竖排 */
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* 窄屏：徽标另起一行横排显示，不再挤在勾选项右侧。
+   flex-basis 100% 触发换行，max-width 再把药丸收回文字宽度（否则边框撑满整行） */
+@media (max-width: 620px) {
+  .toggles .school-badge {
+    flex-basis: 100%;
+    max-width: fit-content;
+    margin-left: 0;
+  }
 }
 
 .school-badge.ok {
@@ -798,6 +812,23 @@ body {
   border: 1px solid rgba(34, 197, 94, 0.35);
   border-radius: 999px;
   padding: 3px 10px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* 标题下副行：徽标 + 一句格式说明（窄屏各占一行，参照 react-8char） */
+.export-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.export-note {
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--text-dim);
 }
 
 /* 导出详略分档 */
@@ -851,11 +882,18 @@ body {
 
 .tier-note.single { margin-top: 12px; }
 
+/* 可选项区：流卦附带 / 判读速查两枚勾选，纵向排布 */
+.export-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .rules-toggle {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin-top: 10px;
   font-size: 0.76rem;
   line-height: 1.5;
   color: var(--text-dim);
@@ -864,11 +902,51 @@ body {
 
 .rules-toggle input { margin-top: 2px; flex: 0 0 auto; cursor: pointer; }
 
+.rules-toggle span { flex: 1 1 auto; }
+
+/* 速查体积增量徽标：未勾为暗态，勾选点亮（体积变化即时可见） */
+.rules-delta {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  align-self: center;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.rules-delta.on {
+  color: var(--gold-light);
+  border-color: rgba(212, 175, 55, 0.45);
+  background: rgba(212, 175, 55, 0.1);
+}
+
+/* 按钮内联体积数字在勾选切换时闪金提示变化 */
+.size-flash {
+  font-style: normal;
+  animation: size-flash 0.7s ease;
+}
+
+@keyframes size-flash {
+  0% { color: var(--gold-light); text-shadow: 0 0 8px rgba(212, 175, 55, 0.6); }
+  100% { color: inherit; text-shadow: none; }
+}
+
+/* 下载一排 / 喂 AI 一排，各两列（参照 react-8char；窄屏退单列） */
 .export-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
+}
+
+.export-grid + .export-grid { margin-top: 8px; }
+
+@media (max-width: 620px) {
+  .export-grid { grid-template-columns: 1fr; }
 }
 
 .btn-outline {

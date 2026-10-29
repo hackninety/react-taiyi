@@ -131,7 +131,17 @@ describe('导出', () => {
     expect(parsed.yijingRefs.卦.length).toBeGreaterThan(0);
     const first = parsed.yijingRefs.卦[0];
     expect(first.卦辞.length).toBeGreaterThan(0);
-    expect(Array.isArray(first.爻辞)).toBe(true);
+    // 爻辞只收动爻（防海量无关爻辞稀释注意力）：无动爻之卦不带爻辞，动爻卦逐条对应
+    for (const h of parsed.yijingRefs.卦 as Array<{ 本盘动爻?: string[]; 动爻爻辞?: string[] }>) {
+      if (h.本盘动爻?.length) {
+        expect(h.动爻爻辞!.length).toBe(h.本盘动爻.length);
+        for (const line of h.动爻爻辞!) {
+          expect(h.本盘动爻.some((d) => line.startsWith(d))).toBe(true);
+        }
+      } else {
+        expect(h.动爻爻辞).toBeUndefined();
+      }
+    }
     // 值年卦（result.yearGua，带卦符）应能被收录（卦符块 U+4DC0–4DFF 在 U+4E00 前，用 一-鿿 剥离）
     const yearHex = result.yearGua.replace(/[^一-鿿]/g, '');
     expect(parsed.yijingRefs.卦.some((h: { 卦: string }) => h.卦 === yearHex)).toBe(true);
@@ -166,7 +176,10 @@ describe('导出', () => {
     }
     expect(md).toContain(result.kook.text);
     expect(md).toContain(`主算 | ${result.homeSuan.value}`);
-    expect(md).toContain('太白(星)');
+    // 十精独立成列（不与星将混排），行限为竖表
+    expect(md).toContain('| 辰位 | 十六神 | 落宫星将 | 十精（七曜） |');
+    expect(md).toContain('太白');
+    expect(md).toContain('| 年龄段 | 支 |');
     expect(md).toContain(String(mingfa.lifeAccum));
   });
 
@@ -237,9 +250,6 @@ describe('导出', () => {
     const toonStr = toTOONText(payload);
     const jo = JSON.parse(jsonStr) as Record<string, unknown>;
     const to = decode(toonStr) as Record<string, unknown>;
-    // exportedAt 为两次调用的时间戳，剔除后比对
-    delete jo.exportedAt;
-    delete to.exportedAt;
     expect(to).toEqual(jo);
     expect(toonStr.length).toBeLessThan(jsonStr.length);
   });
